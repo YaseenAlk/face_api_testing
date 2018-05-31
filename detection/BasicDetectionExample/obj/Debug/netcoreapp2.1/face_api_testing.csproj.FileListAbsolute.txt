@@ -20,3 +20,14 @@
 /Users/yaseen/Documents/GitHub/face_api_testing/detection/obj/Debug/netcoreapp2.1/face_api_testing.AssemblyInfo.cs
 /Users/yaseen/Documents/GitHub/face_api_testing/detection/obj/Debug/netcoreapp2.1/face_api_testing.dll
 /Users/yaseen/Documents/GitHub/face_api_testing/detection/obj/Debug/netcoreapp2.1/face_api_testing.pdb
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/bin/Debug/netcoreapp2.1/face_api_testing.deps.json
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/bin/Debug/netcoreapp2.1/face_api_testing.runtimeconfig.json
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/bin/Debug/netcoreapp2.1/face_api_testing.runtimeconfig.dev.json
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/bin/Debug/netcoreapp2.1/face_api_testing.dll
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/bin/Debug/netcoreapp2.1/face_api_testing.pdb
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/obj/Debug/netcoreapp2.1/face_api_testing.csprojAssemblyReference.cache
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/obj/Debug/netcoreapp2.1/face_api_testing.csproj.CoreCompileInputs.cache
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/obj/Debug/netcoreapp2.1/face_api_testing.AssemblyInfoInputs.cache
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/obj/Debug/netcoreapp2.1/face_api_testing.AssemblyInfo.cs
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/obj/Debug/netcoreapp2.1/face_api_testing.dll
+/Users/yaseen/Documents/GitHub/face_api_testing/detection/BasicDetectionExample/obj/Debug/netcoreapp2.1/face_api_testing.pdb
