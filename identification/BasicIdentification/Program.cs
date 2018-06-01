@@ -5,28 +5,41 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Web;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace CSHttpClientSample
 {
     static class Program
     {
-        // Replace <Subscription Key> with your valid subscription key.
         const string subscriptionKey = "abe02e5cbec341c195ce55750e8b0765";
 
-        // NOTE: You must use the same region in your REST call as you used to
-        // obtain your subscription keys. For example, if you obtained your
-        // subscription keys from westus, replace "westcentralus" in the URL
-        // below with "westus".
-        //
-        // Free trial subscription keys are generated in the westcentralus region.
-        // If you use a free trial subscription key, you shouldn't need to change
-        // this region.
         const string uriBase =
             "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/";
 
+        /* TODO: implement await for the async API calls, 
+            so that transition between API calls is automatic.
+
+        functions: CreatePersonGroup(), DefinePersonsInPersonGroup(), DefineFacesForPersons(), TrainPersonGroup(), CheckTraining(), DetectFaces(), IdentifyFaces(), OutputMatchResults()
+
+        Flow:
+        -- Start of Training methods (only needs to be done once for a unique dataset) -- 
+            CreatePersonGroup() --> single API Call --> wait for response --> if finished and no error, proceed to DefinePersonsInGroup()
+            DefinePersonsInPersonGroup() --> multiple PARALLEL API calls (constant) --> wait for responses --> if all finished and no error, proceed to DefineFacesForPersons()
+            DefineFacesForPersons() --> multiple PARALLEL API calls (constant) --> wait for responses --> if all finished and no error, proceed to TrainPersonGroup()
+            TrainPersonGroup() --> single API call --> wait for response --> if finished (API call sent, not necessarily done training) and no error, proceed to CheckTraining()
+            CheckTraining() --> variable SEQUENTIAL API calls --> foreach call, send to API and wait for response --> if still training and no error, send call again; elseif done training and no error, proceed to DetectFaces()
+        -- End of Training methods --
+
+        -- Start of Identification Methods --
+            DetectFaces() --> single API call --> wait for response --> store response --> proceed to IdentifyFaces()
+            IdentifyFaces() --> variable PARALLEL API calls (depends on DetectFaces()) --> wait for responses --> foreach response, store identification result --> if all responses finished and no error, proceed to to OutputMatchResults()
+            OutputMatchResults() --> output the result of each face --> end program
+        -- End of Identification Methods --     */
+
         static void Main()
         {
-            // Get the path and filename to process from the user.
+
             //Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
             //CreatePersonGroup();
             //Console.ReadLine();
@@ -36,11 +49,33 @@ namespace CSHttpClientSample
             //Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
             //DefineFacesForPersons();
             //Console.ReadLine();
-            Console.WriteLine("Finally, I need to train the PersonGroup.");
-            TrainPersonGroup();
-            Console.ReadLine();
+            //Console.WriteLine("Finally, I need to train the PersonGroup.");
+            //TrainPersonGroup();
+            //Console.ReadLine();
 
-            Console.WriteLine("The PersonGroup is now ready to start identifying!");
+            /* Console.WriteLine("The PersonGroup is now ready to start identifying!");
+            Console.Write(
+                "Enter the path to an image with faces that you wish to analyze: ");
+            string imageFilePath = Console.ReadLine();
+
+            if (File.Exists(imageFilePath))
+            {
+                // Execute the REST API call.
+                try
+                {
+                    AnalyzeImage(imageFilePath);
+                    Console.WriteLine("\nWait a moment for the results to appear.\n");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("\n" + e.Message + "\nPress Enter to exit...\n");
+                }
+            }
+            else
+            {
+                Console.WriteLine("\nInvalid file path.\nPress Enter to exit...\n");
+            }
+            Console.ReadLine();*/
         }
 
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}
@@ -82,6 +117,8 @@ namespace CSHttpClientSample
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons/{personId}/persistedFaces[?userData][&targetFace]
         static async void DefineFacesForPersons()
         {
+            // each ID corresponds to a Person within the sample_group PersonGroup
+            // these are generated by the server every time a new Person is successfully added
             string dadID = "9fccaee3-a01b-4791-a8de-52d803ce9f13";
             string sisID = "cdfa62bc-7d45-4b31-a39c-589c38f95c16";
             string momID = "43b2a4ba-a044-4617-8c37-a022a4e6e26e";
@@ -154,6 +191,42 @@ namespace CSHttpClientSample
             MakeRequest("Training the sample_group PersonGroup using the added images", URI, empty, "application/json", "POST");
         }
 
+        static async void CheckTraining()
+        {}
+
+        static async void DetectFaces()
+        {}
+
+        static async void IdentifyFaces()
+        {}
+
+        static async void OutputMatchResults()
+        {}
+
+        static string lastResponse = "";
+
+        static async void AnalyzeImage(string path)
+        {
+            string URI = uriBase + "detect?";
+            Dictionary<string, string> attributes = new Dictionary<string, string>();
+            attributes.Add("returnFaceId", "true");
+
+            byte[] imgData = GetImageAsByteArray(path);
+            MakeRequest("Detecting Faces in Image", URI, imgData, "application/octet-stream", "POST");
+            Console.WriteLine();
+
+            Console.WriteLine("Here's what lastResponse contains:");
+            Console.WriteLine(lastResponse);
+
+            // parse imageIDs from the image we just detected
+            string json = lastResponse;
+            JObject[] data = (JObject[])JsonConvert.DeserializeObject(json);    //data will be a list of Faces
+            foreach (JObject face in data)
+            {
+                Console.WriteLine("Here's a faceId: " + face["faceId"].Value<string>());
+            }
+        }
+
         static async void MakeRequest(string purpose, string uri, byte[] reqBodyData, string bodyContentType, string method, Dictionary<string, string> requestParameters = null)
         {
             var client = new HttpClient();
@@ -197,7 +270,9 @@ namespace CSHttpClientSample
                 // Display the JSON response.
                 Console.WriteLine("\nResponse for " + purpose + ":\n");
                 Console.WriteLine(JsonPrettyPrint(contentString));
-                Console.WriteLine("\nPress Enter to exit...");  //debug line
+                Console.WriteLine("\nPress any key to continue...");  //debug line
+
+                lastResponse = await response.Content.ReadAsStringAsync();
             }
         }
 
