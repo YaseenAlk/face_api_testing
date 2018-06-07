@@ -19,7 +19,7 @@ namespace CSHttpClientSample
         const string uriBase =
             "https://eastus.api.cognitive.microsoft.com/face/v1.0/";
 
-        const string personGroupId = "sample_group_i";
+        const string personGroupId = "sample_group_k";
         const string personGroupName = "Person Group using the Sample Data";
 
         const bool make_new_grp = true;
@@ -56,17 +56,18 @@ namespace CSHttpClientSample
             Console.WriteLine(">    defined_ppl: " + defined_ppl);
             if (defined_ppl) Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
             bool defined_faces = await DefineFacesForPersonsAsync(defined_ppl);
-            //if (defined_faces) Console.WriteLine("Finally, I need to train the PersonGroup.");
-            //bool startedTraining = await TrainPersonGroupAsync(defined_faces);
-            //if (startedTraining)
-            //{
-            //    bool finishedTraining = await CheckTrainingAsync(startedTraining);
-            //    while (!finishedTraining)
-            //    {
-            //        finishedTraining = await CheckTrainingAsync(startedTraining);
-            //    }
-            //}
-            //Console.ReadLine();
+            if (defined_faces) Console.WriteLine("Finally, I need to train the PersonGroup.");
+            bool startedTraining = await TrainPersonGroupAsync(defined_faces);
+            if (startedTraining)
+            {
+                Console.WriteLine("Checking if training is completed... ");
+                bool finishedTraining = await CheckTrainingAsync();
+                while (!finishedTraining)
+                {
+                    finishedTraining = await CheckTrainingAsync();
+                }
+                Console.WriteLine("Training complete!");
+            }
 
             /* Console.WriteLine("The PersonGroup is now ready to start identifying!");
             Console.Write(
@@ -283,27 +284,26 @@ namespace CSHttpClientSample
         }
 
         // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/training
-        static async Task<bool> CheckTrainingAsync(bool proceed)
+        static async Task<bool> CheckTrainingAsync()
         {
-            if (proceed)
-            {
-                string URI = uriBase + "persongroups/" + personGroupId + "/training";
+            string URI = uriBase + "persongroups/" + personGroupId + "/training";
+            
+            byte[] empty = Encoding.UTF8.GetBytes("{}");
 
-                byte[] empty = Encoding.UTF8.GetBytes("{}");
-
-                string trainRsp = await MakeRequestAsync("Checking the status of the training", URI, empty, "application/json", "GET");
+            string trainRsp = await MakeRequestAsync("Checking the status of the training", URI, empty, "application/json", "GET");
                 
-                if (trainRsp == "") //todo: change to proper response check
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+            JObject data = (JObject) JsonConvert.DeserializeObject(trainRsp);   //data should just be {"persistedFaceId": "..."}
+            string status = data["status"].Value<string>();
+            if (status != "")
+            {
+                Console.WriteLine(">        (training) status: " + status);
+                
+                return status == "succeeded";
             }
             else
             {
+                Console.WriteLine(">    There seems to be a problem with requesting the training status of personGroupId '" + personGroupId + "'");
+                Console.WriteLine(">    Response: " + trainRsp);
                 return false;
             }
         }
