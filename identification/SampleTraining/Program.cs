@@ -80,7 +80,6 @@ namespace CSHttpClientSample
                 string URI = uriBase + "persongroups/" + personGroupId;
                 string reqBodyJSON = "{'name': '" + personGroupName +  "'}";
                 byte[] reqBody = Encoding.UTF8.GetBytes(reqBodyJSON);
-                bool goodResponse;
 
                 string response = await MakeRequestAsync("Creating PersonGroup", URI, reqBody, "application/json", "PUT");
                 if (response == "")     //ideal response: empty string

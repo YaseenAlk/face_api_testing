@@ -1,7 +1,7 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2017
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicIdentification", "BasicIdentification.csproj", "{23D51B8F-4BB8-4749-AD07-89ECBF024305}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleTraining", "SampleTraining.csproj", "{23D51B8F-4BB8-4749-AD07-89ECBF024305}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

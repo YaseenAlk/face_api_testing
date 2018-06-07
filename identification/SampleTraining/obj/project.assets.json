@@ -978,11 +978,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/BasicIdentification.csproj",
-      "projectName": "BasicIdentification",
-      "projectPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/BasicIdentification.csproj",
+      "projectUniqueName": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/SampleTraining/SampleTraining.csproj",
+      "projectName": "SampleTraining",
+      "projectPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/SampleTraining/SampleTraining.csproj",
       "packagesPath": "/Users/yaseen/.nuget/packages/",
-      "outputPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/obj/",
+      "outputPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/SampleTraining/obj/",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "/usr/local/share/dotnet/sdk/NuGetFallbackFolder"
