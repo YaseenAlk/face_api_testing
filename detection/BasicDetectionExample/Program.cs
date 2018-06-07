@@ -9,7 +9,7 @@ namespace CSHttpClientSample
     static class Program
     {
         // Replace <Subscription Key> with your valid subscription key.
-        const string subscriptionKey = "abe02e5cbec341c195ce55750e8b0765";
+        const string subscriptionKey = "a43530f777ee45599a06535c39b2fe4f";
 
         // NOTE: You must use the same region in your REST call as you used to
         // obtain your subscription keys. For example, if you obtained your
@@ -20,7 +20,7 @@ namespace CSHttpClientSample
         // If you use a free trial subscription key, you shouldn't need to change
         // this region.
         const string uriBase =
-            "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect";
+            "https://eastus.api.cognitive.microsoft.com/face/v1.0/detect/";
 
         static void Main()
         {

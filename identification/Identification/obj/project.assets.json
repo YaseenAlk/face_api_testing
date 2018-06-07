@@ -687,11 +687,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/SampleIdentification/SampleIdentification.csproj",
-      "projectName": "SampleIdentification",
-      "projectPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/SampleIdentification/SampleIdentification.csproj",
+      "projectUniqueName": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/Identification/Identification.csproj",
+      "projectName": "Identification",
+      "projectPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/Identification/Identification.csproj",
       "packagesPath": "/Users/yaseen/.nuget/packages/",
-      "outputPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/SampleIdentification/obj/",
+      "outputPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/Identification/obj/",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "/usr/local/share/dotnet/sdk/NuGetFallbackFolder"
