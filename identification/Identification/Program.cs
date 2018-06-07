@@ -19,8 +19,7 @@ namespace CSHttpClientSample
         const string uriBase =
             "https://eastus.api.cognitive.microsoft.com/face/v1.0/";
 
-        const string personGroupId = "sample_group_k";
-        const string personGroupName = "Person Group using the Sample Data";
+        static string personGroupId;
         
         /* 
         functions: DetectFaces(), IdentifyFaces(), OutputMatchResults()
@@ -35,305 +34,134 @@ namespace CSHttpClientSample
         static async Task Main()
         {
             Console.WriteLine("Now that training is complete, the PersonGroup is ready to start identifying!");
+            Console.Write("Enter the personGroupId that we are comparing with: ");
+            personGroupId = Console.ReadLine();
+
             Console.Write("Enter the path to an image with faces that you wish to analyze: ");
             string imageFilePath = Console.ReadLine();
 
+            List<string> detectedFaceIds;
+
             if (File.Exists(imageFilePath))
             {
-                // Execute the REST API call.
                 try
                 {
-                    AnalyzeImage(imageFilePath);
-                    Console.WriteLine("\nWait a moment for the results to appear.\n");
+                    detectedFaceIds = await DetectFacesAsync(imageFilePath);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("\n" + e.Message + "\nPress Enter to exit...\n");
+                    Console.WriteLine("\n" + e.Message);
+                    detectedFaceIds = null;
                 }
             }
             else
             {
-                Console.WriteLine("\nInvalid file path.\nPress Enter to exit...\n");
+                Console.WriteLine("\nInvalid file path.");
+                detectedFaceIds = null;
             }
-            Console.ReadLine();*/
+
+            if (detectedFaceIds != null)
+            {
+                Dictionary<string, Dictionary<string, float>> results = await IdentifyAsync(detectedFaceIds);
+
+                //OutputResults doesn't necessarily need to be async;
+                //it's only async here because I do an extra step that maps the personId back to their name (after results are calculated)
+                await OutputResultsAsync(results);
+            }
         }
 
-        /// <summary>
-        /// Sends a single HTTP PUT request to create a new PersonGroup.
-        ///
-        /// Flow:
-        /// CreatePersonGroupAsync() --> single API Call --> wait for response --> compare with ideal response --> return proceed bool
-        ///
-        /// Request URL: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}
-        ///
-        /// Refer to Microsoft's documentation for specific error responses:
-        /// https://eastus.dev.cognitive.microsoft.com/docs/services/563879b61984550e40cbbe8d/operations/563879b61984550f30395244
-        /// </summary>
-        /// <param name="proceed">Pre-determined condition to decide if the Task should run</param>
-        /// <returns>The proceed condition for the next Task (True if the API response is expected)</returns>
-        static async Task<bool> CreatePersonGroupAsync(bool proceed)
+        // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/detect[?returnFaceId][&returnFaceLandmarks][&returnFaceAttributes]
+        static async Task<List<string>> DetectFacesAsync(string imgPath)
         {
-            if (proceed)
-            {
-                string URI = uriBase + "persongroups/" + personGroupId;
-                string reqBodyJSON = "{'name': '" + personGroupName +  "'}";
-                byte[] reqBody = Encoding.UTF8.GetBytes(reqBodyJSON);
+            string URI = uriBase + "detect";
+            byte[] img = GetImageAsByteArray(imgPath);
+            List<string> detectedIds = new List<string>();
 
-                string response = await MakeRequestAsync("Creating PersonGroup", URI, reqBody, "application/json", "PUT");
-                if (response == "")     //ideal response: empty string
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
+            string rsp = await MakeRequestAsync("Detect faces in an image", URI, img, "application/octet-stream", "POST");
+            //response will be a list of faces: [{"faceId":"...", ...}, {"faceId":"...", ...}]
+            JArray data = (JArray) JsonConvert.DeserializeObject(rsp);   //data should just be {"personId": "..."}
+            foreach (JObject face in data)
             {
-                Console.WriteLine("Something went wrong, so CreatePersonGroupAsync() will not proceed.");
-                return false;
+                detectedIds.Add(face["faceId"].Value<string>());
             }
-            
+
+            return detectedIds;
         }
 
-        /// <summary>
-        /// Sends multiple HTTP POST requests to add Persons to the PersonGroup.
-        ///
-        /// Flow:
-        /// DefinePersonsInPersonGroupAsync() --> use AddPersonsAsync() to add Persons and receive responses --> compare with ideal responses --> return proceed bool
-        ///
-        /// Request URL: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons
-        /// 
-        /// Refer to Microsoft's documentation for specific error responses:
-        /// https://westus.dev.cognitive.microsoft.com/docs/services/563879b61984550e40cbbe8d/operations/563879b61984550f3039523c
-        /// </summary>
-        /// <param name="proceed">Pre-determined condition to decide if the Task should run</param>
-        /// <returns>The proceed condition for the next Task (True if at least one API response is expected)</returns>
-        static async Task<bool> DefinePersonsInPersonGroupAsync(bool proceed)
+        static async Task<Dictionary<string, Dictionary<string, float>>> IdentifyAsync(List<string> detectedIds)
         {
-            if (proceed)
+            Dictionary<string, Dictionary<string, float>> results = new Dictionary<string, Dictionary<string, float>>();
+            foreach (string id in detectedIds)
             {
-                Dictionary<string, string> idAndResponse = await AddPersonsAsync();
+                string rsp = await IdentifyFaceAsync(id);
+                JArray data = (JArray) JsonConvert.DeserializeObject(rsp);
+                //data should be {[{"faceId":"...", "candidates": [{"personId":"...", "confidence": #.##}, {"personId":"...", "confidence": #.##}] }]}
 
-                int valid = 0;  //number of valid Persons
-
-                foreach(KeyValuePair<string, string> entry in idAndResponse)
+                JObject faceAndCandidates = (JObject) data[0];    //single face, potentially many candidates
+                Dictionary<string, float> idsAndConfidences = new Dictionary<string, float>();
+                
+                JArray candidates = (JArray) faceAndCandidates["candidates"];
+                foreach (JObject cand in candidates)
                 {
-                    string rsp = entry.Value;
-                    JObject data = (JObject) JsonConvert.DeserializeObject(rsp);   //data should just be {"personId": "..."}
-                    string id = data["personId"].Value<string>();
-                    if (id != "")   //ideal response: a JSON string with a "personId" field
+                    idsAndConfidences.Add(cand["personId"].Value<string>(), cand["confidence"].Value<float>());
+                }
+
+                results.Add(faceAndCandidates["faceId"].Value<string>(), idsAndConfidences);
+            }
+            return results;
+        }
+
+        static async Task OutputResultsAsync(Dictionary<string, Dictionary<string, float>> results)
+        {
+            //keys are detected faces; values are the list of candidates for each face
+            int faceNum = 0;
+            foreach(KeyValuePair<string, Dictionary<string, float>> entry in results)
+            {
+                Console.WriteLine("---- Detected Face #" + faceNum + " ----");
+                string faceId = entry.Key;  //currently not using the faceId for anything. might be useful in the future
+                Dictionary<string, float> candidates = entry.Value;
+                
+                foreach(KeyValuePair<string, float> cand in candidates)
+                {
+                    string candName = await IdToNameAsync(cand.Key);
+                    float confidence = cand.Value;
+                    if (candName != null)   //not sure if this is the proper way to wait for the task
                     {
-                        valid++;
-                        Console.WriteLine(">    personId: " + id);
-                        validPersonIds.Add(id);
-                    }
-                    else
-                    {
-                        Console.WriteLine(">    There seems to be a problem with Defining '" + entry.Key + "'");
-                        Console.WriteLine(">    Response: " + rsp);
+                        Console.WriteLine("I am " + (confidence * 100) + "% sure that you are " + candName);
                     }
                 }
-
-                return valid > 0;
-
-            }
-            else
-            {
-                Console.WriteLine("Something went wrong, so DefinePersonsInPersonGroupAsync() will not proceed.");
-                return false;
+                Console.WriteLine("--------------------------");
+                faceNum++;
             }
         }
 
-        /// <summary>
-        /// Helper method for DefinePersonsInPersonGroupAsync()
-        ///
-        /// Sends multiple HTTP POST requests to add the pre-defined Persons to the PersonGroup. All requests are sent in parallel.
-        ///
-        /// Microsoft documentation:
-        /// https://westus.dev.cognitive.microsoft.com/docs/services/563879b61984550e40cbbe8d/operations/563879b61984550f3039523c 
-        /// </summary>
-        /// <returns>A string/string Dictionary with attempted Persons. The Person name (NOT personId) is the Key and the HTTP response is the Value.</returns>
-        static async Task<Dictionary<string, string>> AddPersonsAsync()
+        // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/identify
+        static async Task<string> IdentifyFaceAsync(string faceId)
         {
-            string URI = uriBase + "persongroups/" + personGroupId + "/persons/";
-            // Persons to add: Family1-Dad, Family1-Daughter, Family1-Mom, Family1-Son, Family2-Lady, Family2-Man, Family3-Lady, Family3-Man
+            //TODO: the API is capable of handling 10 independent faces in one call of "Face - Identify"
+            //currently, I am putting one face per call because it guarantees that every call will have <10 faces
+            //it might be beneficial to rewrite this such that the number of API calls is minimized 
+            //(and the number of faces put into each call is maximized)
+            string URI = uriBase + "identify";
+            string reqBody = "{\"personGroupId\": \"" + personGroupId + "\", \"faceIds\": [\"" + faceId + "\"]}";
+            byte[] req = Encoding.UTF8.GetBytes(reqBody);
 
-            Dictionary<string, string> idAndResponse = new Dictionary<string, string>();
-
-            byte[] f1Dad = Encoding.UTF8.GetBytes("{'name': 'Family1-Dad'}");
-            string f1DadRsp = await MakeRequestAsync("Adding Family1-Dad to PersonGroup", URI, f1Dad, "application/json", "POST");
-            idAndResponse.Add("Family1-Dad", f1DadRsp);
-                
-            byte[] f1Daughter = Encoding.UTF8.GetBytes("{'name': 'Family1-Daughter'}");
-            string f1DaughterRsp = await MakeRequestAsync("Adding Family1-Daughter to PersonGroup", URI, f1Daughter, "application/json", "POST");
-            idAndResponse.Add("Family1-Daughter", f1DaughterRsp);
-                                
-            byte[] f1Mom = Encoding.UTF8.GetBytes("{'name': 'Family1-Mom'}");
-            string f1MomRsp = await MakeRequestAsync("Adding Family1-Mom to PersonGroup", URI, f1Mom, "application/json", "POST");
-            idAndResponse.Add("Family1-Mom", f1MomRsp);
-                
-            byte[] f1Son = Encoding.UTF8.GetBytes("{'name': 'Family1-Son'}");
-            string f1SonRsp = await MakeRequestAsync("Adding Family1-Son to PersonGroup", URI, f1Son, "application/json", "POST");
-            idAndResponse.Add("Family1-Son", f1SonRsp);
-
-            return idAndResponse;
+            string rsp = await MakeRequestAsync("Identify person using faceId", URI, req, "application/json", "POST");
+            return rsp;
         }
 
-        /// <summary>
-        /// Sends multiple HTTP POST requests to add Faces (upload images) for each Person in the PersonGroup
-        ///
-        /// Flow:
-        /// DefineFacesForPersons() --> multiple sequential API calls --> wait for responses --> if all finished and no error, proceed to TrainPersonGroup()
-        ///
-        /// Request URL: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons/{personId}/persistedFaces[?userData][&targetFace]
-        ///
-        /// Refer to Microsoft's documentation for specific error responses:
-        /// https://westus.dev.cognitive.microsoft.com/docs/services/563879b61984550e40cbbe8d/operations/563879b61984550f3039523b
-        ///
-        /// Note: There is the potential for this method to be rewritten so that the requests are sent in parallel.
-        /// </summary>
-        /// <param name="proceed">Pre-determined condition to decide if the Task should run</param>
-        /// <returns>The proceed condition for the next Task (True if at least one API response is expected)</returns>
-        static async Task<bool> DefineFacesForPersonsAsync(bool proceed)
+        // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons/{personId}
+        static async Task<string> IdToNameAsync(string id)
         {
-            if (proceed)
-            {
-                // each ID corresponds to a Person within the sample_group PersonGroup
-                // these are generated by the server every time a new Person is successfully added
-                string[] hardcoded_img_paths = {"../../res/SampleData/PersonGroup/Family1-Dad/Family1-Dad",
-                                            "../../res/SampleData/PersonGroup/Family1-Daughter/Family1-Daughter",
-                                            "../../res/SampleData/PersonGroup/Family1-Mom/Family1-Mom",
-                                            "../../res/SampleData/PersonGroup/Family1-Son/Family1-Son"};
-
-                string generalURI = uriBase + "persongroups/" + personGroupId + "/persons/";
-                
-                int traverse = 0;
-                int valid = 0;      //Number of valid Faces
-
-                foreach (string id in validPersonIds)
-                {
-                    string URI = generalURI + id + "/persistedFaces?";
-                    string current_family_member = hardcoded_img_paths[traverse];
-                    for (int i = 1; i < 4; i++)
-                    {
-                        string imgPath = current_family_member + i + ".jpg";
-                        string[] splitPath = imgPath.Split("/");
-                        string imgName = splitPath[splitPath.Length - 1];
-
-                        byte[] img = GetImageAsByteArray(imgPath);
-                        string rsp = await MakeRequestAsync("Adding " + imgName + " to " + id, URI, img, "application/octet-stream", "POST");
-                        
-                        Console.WriteLine(">        Image path: " + imgPath);
-
-                        JObject data = (JObject) JsonConvert.DeserializeObject(rsp);   //data should just be {"persistedFaceId": "..."}
-                        string faceId = data["persistedFaceId"].Value<string>();
-                        if (faceId != "")   //ideal response: a JSON string with a "persistedFaceId" field
-                        {
-                            valid++;
-                            Console.WriteLine(">        persistedFaceId: " + faceId);
-                        }
-                        else
-                        {
-                            Console.WriteLine(">    There seems to be a problem with adding the img '" + imgName + "' to personId " + id);
-                            Console.WriteLine(">    Response: " + rsp);
-                        }
-                    }
-                    traverse++;
-                }
-
-                return valid > 0;
-            }
-            else
-            {
-                Console.WriteLine("Something went wrong, so DefineFacesForPersonsAsync() will not proceed.");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Sends a single HTTP POST request to *start* training the API with the PersonGroup. Note that the response may be received before training is complete.
-        ///
-        /// Flow:
-        /// TrainPersonGroupAsync() --> single API Call --> wait for response --> compare with ideal response --> return proceed bool
-        ///
-        /// Request URL: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/train
-        ///
-        /// Refer to Microsoft's documentation for specific error responses:
-        /// https://westus.dev.cognitive.microsoft.com/docs/services/563879b61984550e40cbbe8d/operations/563879b61984550f30395249
-        /// </summary>
-        /// <param name="proceed">Pre-determined condition to decide if the Task should run</param>
-        /// <returns>The proceed condition for the next Task (True if the API response is expected)</returns>
-        static async Task<bool> TrainPersonGroupAsync(bool proceed)
-        {
-            if (proceed)
-            {
-                string URI = uriBase + "persongroups/" + personGroupId + "/train";
-
-                byte[] empty = Encoding.UTF8.GetBytes("{}");
-
-                string trainRsp = await MakeRequestAsync("Training the " + personGroupId + " PersonGroup using the added images", URI, empty, "application/json", "POST");
-                
-                if (trainRsp == "")     //ideal response: empty string
-                {
-                    return true;
-                }
-                else
-                {
-                    Console.WriteLine("Training Request failed.");
-                    Console.WriteLine("Response: " + trainRsp);
-                    return false;
-                }
-            }
-            else 
-            {
-                Console.WriteLine("Something went wrong, so TrainPersonGroupAsync() will not proceed.");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Sends a single HTTP GET request to receive the current training status.
-        /// Possible statuses: "notstarted", "running", "succeeded", or "failed"
-        /// 
-        /// Flow:
-        /// CheckTrainingAsync() --> single API Call --> wait for response --> compare with ideal response --> return bool
-        ///
-        /// Request URL: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/training
-        ///
-        /// Refer to Microsoft's documentation for more information:
-        /// https://westus.dev.cognitive.microsoft.com/docs/services/563879b61984550e40cbbe8d/operations/563879b61984550f30395247
-        /// 
-        /// Note that this method is only invoked if TrainPersonGroupAsync has been invoked 
-        /// and if the Training request's asynchronous Task has been completed.
-        /// Therefore, there is no need for a "proceed" boolean argument.
-        /// </summary>
-        /// <returns>True if the request is successfully sent and the received status is "succeeded"; False for all other cases</returns>
-        static async Task<bool> CheckTrainingAsync()
-        {
-            string URI = uriBase + "persongroups/" + personGroupId + "/training";
-            
+            string URI = uriBase + "persongroups/" + personGroupId + "/persons/" + id;
             byte[] empty = Encoding.UTF8.GetBytes("{}");
 
-            string trainRsp = await MakeRequestAsync("Checking the status of the training", URI, empty, "application/json", "GET");
-                
-            JObject data = (JObject) JsonConvert.DeserializeObject(trainRsp);   //data should just be {"persistedFaceId": "..."}
-            string status = data["status"].Value<string>();
-            if (status != "")       //ideal response: a JSON string with a "status" field
-            {
-                Console.WriteLine(">        (training) status: " + status);
-                
-                return status == "succeeded";
-            }
-            else
-            {
-                Console.WriteLine(">    There seems to be a problem with requesting the training status of personGroupId '" + personGroupId + "'");
-                Console.WriteLine(">    Response: " + trainRsp);
-                return false;
-            }
+            string rsp = await MakeRequestAsync("Retrieve Person associated with ID", URI, empty, "application/json", "GET");
+            JObject data = (JObject) JsonConvert.DeserializeObject(rsp);   //data should be {"personId": "...", ...}
+            return data["name"].Value<string>();    //todo: make this error-prone
         }
 
+       
         static async Task<string> MakeRequestAsync(string purpose, string uri, byte[] reqBodyData, string bodyContentType, string method, Dictionary<string, string> requestParameters = null)
         {
             var client = new HttpClient();
