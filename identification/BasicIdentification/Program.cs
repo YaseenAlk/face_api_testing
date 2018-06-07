@@ -21,7 +21,7 @@ namespace CSHttpClientSample
         const string personGroupId = "sample_group";
         const string personGroupName = "Person Group using the Sample Data";
 
-        const bool make_new_group = true;
+        const bool make_new_grp = true;
         /* TODO: implement await for the async API calls, 
             so that transition between API calls is automatic.
 
@@ -44,15 +44,22 @@ namespace CSHttpClientSample
 
         static async Task Main()
         {
-            Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
-            bool created_grp = await CreatePersonGroupAsync(make_new_group);
+            if (make_new_grp) Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
+            bool created_grp = await CreatePersonGroupAsync(make_new_grp);
             if (created_grp) Console.WriteLine("Then, I need to define the Persons in the PersonGroup. (only needs to be done the first time)");
             bool defined_ppl = await DefinePersonsInPersonGroupAsync(created_grp);
             if (defined_ppl) Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
-            //DefineFacesForPersons();
-            //Console.ReadLine();
-            //Console.WriteLine("Finally, I need to train the PersonGroup.");
-            //TrainPersonGroup();
+            bool defined_faces = await DefineFacesForPersonsAsync(defined_ppl);
+            if (defined_faces) Console.WriteLine("Finally, I need to train the PersonGroup.");
+            bool startedTraining = await TrainPersonGroupAsync(defined_faces);
+            if (startedTraining)
+            {
+                bool finishedTraining = await CheckTrainingAsync(startedTraining);
+                while (!finishedTraining)
+                {
+                    finishedTraining = await CheckTrainingAsync(startedTraining);
+                }
+            }
             //Console.ReadLine();
 
             /* Console.WriteLine("The PersonGroup is now ready to start identifying!");
@@ -237,23 +244,42 @@ namespace CSHttpClientSample
             }
             else
             {
-                Console.WriteLine("Something went wrong, so DefineFacesForPersonsAsync will not proceed.");
+                Console.WriteLine("Something went wrong, so DefineFacesForPersonsAsync() will not proceed.");
                 return false;
             }
         }
 
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/train
-        static async void TrainPersonGroup()
+        static async Task<bool> TrainPersonGroupAsync(bool proceed)
         {
-            string URI = uriBase + "persongroups/" + personGroupId + "/train";
+            if (proceed)
+            {
+                string URI = uriBase + "persongroups/" + personGroupId + "/train";
 
-            byte[] empty = Encoding.UTF8.GetBytes("{}");
+                byte[] empty = Encoding.UTF8.GetBytes("{}");
 
-            //MakeRequest("Training the sample_group PersonGroup using the added images", URI, empty, "application/json", "POST");
+                string trainRsp = await MakeRequestAsync("Training the sample_group PersonGroup using the added images", URI, empty, "application/json", "POST");
+                
+                if (trainRsp == "") //todo: change to proper response check
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else 
+            {
+                Console.WriteLine("Something went wrong, so TrainPersonGroupAsync() will not proceed.");
+                return false;
+            }
         }
 
-        static async void CheckTraining()
-        {}
+        static async Task<bool> CheckTrainingAsync(bool proceed)
+        {
+            return false;
+        }
 
         static async void DetectFaces()
         {}
