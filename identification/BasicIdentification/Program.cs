@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -17,6 +18,10 @@ namespace CSHttpClientSample
         const string uriBase =
             "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/";
 
+        const string personGroupId = "sample_group";
+        const string personGroupName = "Person Group using the Sample Data";
+
+        const bool make_new_group = true;
         /* TODO: implement await for the async API calls, 
             so that transition between API calls is automatic.
 
@@ -37,13 +42,11 @@ namespace CSHttpClientSample
             OutputMatchResults() --> output the result of each face --> end program
         -- End of Identification Methods --     */
 
-        static void Main()
+        static async Task Main()
         {
-
-            //Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
-            //CreatePersonGroup();
-            //Console.ReadLine();
-            //Console.WriteLine("Then, I need to define the Persons in the PersonGroup. (only needs to be done the first time)");
+            Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
+            bool created = await CreatePersonGroupAsync(make_new_group);
+            Console.WriteLine("Then, I need to define the Persons in the PersonGroup. (only needs to be done the first time)");
             //DefinePersonsInPersonGroup();
             //Console.ReadLine();
             //Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
@@ -78,39 +81,59 @@ namespace CSHttpClientSample
             Console.ReadLine();*/
         }
 
-        //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}
-        static async void CreatePersonGroup()
+        /// <summary>
+        /// 
+        /// Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}
+        /// </summary>
+        /// <param name="imageFilePath">The image file to read.</param>
+        /// <returns>The byte array of the image data.</returns>
+        static async Task<bool> CreatePersonGroupAsync(bool proceed)
         {
-            string personGroupId = "sample_group";
-            string personGroupName = "Person Group using the Sample Data";
-            string URI = uriBase + "persongroups/" + personGroupId;
-            string reqBodyJSON = "{'name': '" + personGroupName +  "'}";
-            byte[] reqBody = Encoding.UTF8.GetBytes(reqBodyJSON);
+            if (proceed)
+            {
+                string URI = uriBase + "persongroups/" + personGroupId;
+                string reqBodyJSON = "{'name': '" + personGroupName +  "'}";
+                byte[] reqBody = Encoding.UTF8.GetBytes(reqBodyJSON);
+                bool goodResponse;
 
-            MakeRequest("Creating PersonGroup", URI, reqBody, "application/json", "PUT");
+                string response = await MakeRequestAsync("Creating PersonGroup", URI, reqBody, "application/json", "PUT");
+                if (response == "")     // whatever the API response should be
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Something went wrong, so CreatePersonGroupAsync will not proceed.");
+                return false;
+            }
+            
         }
 
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons
         static async void DefinePersonsInPersonGroup()
         {
-            string personGroupId = "sample_group";
             string URI = uriBase + "persongroups/" + personGroupId + "/persons/";
             // Persons to add: Family1-Dad, Family1-Daughter, Family1-Mom, Family1-Son, Family2-Lady, Family2-Man, Family3-Lady, Family3-Man
 
             byte[] f1Dad = Encoding.UTF8.GetBytes("{'name': 'Family1-Dad'}");
-            MakeRequest("Adding Family1-Dad to PersonGroup", URI, f1Dad, "application/json", "POST");
+            //MakeRequest("Adding Family1-Dad to PersonGroup", URI, f1Dad, "application/json", "POST");
             Console.ReadLine();
 
             byte[] f1Daughter = Encoding.UTF8.GetBytes("{'name': 'Family1-Daughter'}");
-            MakeRequest("Adding Family1-Daughter to PersonGroup", URI, f1Daughter, "application/json", "POST");
+            //MakeRequest("Adding Family1-Daughter to PersonGroup", URI, f1Daughter, "application/json", "POST");
             Console.ReadLine();
 
             byte[] f1Mom = Encoding.UTF8.GetBytes("{'name': 'Family1-Mom'}");
-            MakeRequest("Adding Family1-Mom to PersonGroup", URI, f1Mom, "application/json", "POST");
+            //MakeRequest("Adding Family1-Mom to PersonGroup", URI, f1Mom, "application/json", "POST");
             Console.ReadLine();
 
             byte[] f1Son = Encoding.UTF8.GetBytes("{'name': 'Family1-Son'}");
-            MakeRequest("Adding Family1-Son to PersonGroup", URI, f1Son, "application/json", "POST");
+            //MakeRequest("Adding Family1-Son to PersonGroup", URI, f1Son, "application/json", "POST");
             
         }
 
@@ -124,7 +147,6 @@ namespace CSHttpClientSample
             string momID = "43b2a4ba-a044-4617-8c37-a022a4e6e26e";
             string sonID = "6528b9a0-54e3-4156-90c4-e316cc6e4ecc";
             
-            string personGroupId = "sample_group";
             string generalURI = uriBase + "persongroups/" + personGroupId + "/persons/";
 
             string dadURI = generalURI + dadID + "/persistedFaces?";
@@ -133,62 +155,61 @@ namespace CSHttpClientSample
             string sonURI = generalURI + sonID + "/persistedFaces?";
 
             byte[] dad1 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Dad/Family1-Dad1.jpg");
-            MakeRequest("Adding Dad1 pic to Family1-Dad", dadURI, dad1, "application/octet-stream", "POST");
+            //MakeRequest("Adding Dad1 pic to Family1-Dad", dadURI, dad1, "application/octet-stream", "POST");
             Console.ReadLine();
 
             byte[] dad2 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Dad/Family1-Dad2.jpg");
-            MakeRequest("Adding Dad2 pic to Family1-Dad", dadURI, dad2, "application/octet-stream", "POST");
+            //MakeRequest("Adding Dad2 pic to Family1-Dad", dadURI, dad2, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] dad3 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Dad/Family1-Dad3.jpg");
-            MakeRequest("Adding Dad3 pic to Family1-Dad", dadURI, dad3, "application/octet-stream", "POST");
+            //MakeRequest("Adding Dad3 pic to Family1-Dad", dadURI, dad3, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] sis1 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Daughter/Family1-Daughter1.jpg");
-            MakeRequest("Adding Daughter1 pic to Family1-Daughter", sisURI, sis1, "application/octet-stream", "POST");
+            //MakeRequest("Adding Daughter1 pic to Family1-Daughter", sisURI, sis1, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] sis2 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Daughter/Family1-Daughter2.jpg");
-            MakeRequest("Adding Daughter2 pic to Family1-Daughter", sisURI, sis2, "application/octet-stream", "POST");
+            //MakeRequest("Adding Daughter2 pic to Family1-Daughter", sisURI, sis2, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] sis3 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Daughter/Family1-Daughter3.jpg");
-            MakeRequest("Adding Daughter3 pic to Family1-Daughter", sisURI, sis3, "application/octet-stream", "POST");
+            //MakeRequest("Adding Daughter3 pic to Family1-Daughter", sisURI, sis3, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] mom1 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Mom/Family1-Mom1.jpg");
-            MakeRequest("Adding Mom1 pic to Family1-Mom", momURI, mom1, "application/octet-stream", "POST");
+            //MakeRequest("Adding Mom1 pic to Family1-Mom", momURI, mom1, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] mom2 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Mom/Family1-Mom2.jpg");
-            MakeRequest("Adding Mom2 pic to Family1-Mom", momURI, mom2, "application/octet-stream", "POST");
+            //MakeRequest("Adding Mom2 pic to Family1-Mom", momURI, mom2, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] mom3 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Mom/Family1-Mom3.jpg");
-            MakeRequest("Adding Mom3 pic to Family1-Mom", momURI, dad3, "application/octet-stream", "POST");
+            //MakeRequest("Adding Mom3 pic to Family1-Mom", momURI, dad3, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] son1 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Son/Family1-Son1.jpg");
-            MakeRequest("Adding Son1 pic to Family1-Son", sonURI, son1, "application/octet-stream", "POST");
+            //MakeRequest("Adding Son1 pic to Family1-Son", sonURI, son1, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] son2 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Son/Family1-Son2.jpg");
-            MakeRequest("Adding Son2 pic to Family1-Son", sonURI, son2, "application/octet-stream", "POST");
+            //MakeRequest("Adding Son2 pic to Family1-Son", sonURI, son2, "application/octet-stream", "POST");
             Console.ReadLine();
             
             byte[] son3 = GetImageAsByteArray("../../res/SampleData/PersonGroup/Family1-Son/Family1-Son3.jpg");
-            MakeRequest("Adding Son3 pic to Family1-Son", sonURI, son3, "application/octet-stream", "POST");
+            //MakeRequest("Adding Son3 pic to Family1-Son", sonURI, son3, "application/octet-stream", "POST");
         }
 
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/train
         static async void TrainPersonGroup()
         {
-            string personGroupId = "sample_group";
             string URI = uriBase + "persongroups/" + personGroupId + "/train";
 
             byte[] empty = Encoding.UTF8.GetBytes("{}");
 
-            MakeRequest("Training the sample_group PersonGroup using the added images", URI, empty, "application/json", "POST");
+            //MakeRequest("Training the sample_group PersonGroup using the added images", URI, empty, "application/json", "POST");
         }
 
         static async void CheckTraining()
@@ -212,7 +233,7 @@ namespace CSHttpClientSample
             attributes.Add("returnFaceId", "true");
 
             byte[] imgData = GetImageAsByteArray(path);
-            MakeRequest("Detecting Faces in Image", URI, imgData, "application/octet-stream", "POST");
+            //MakeRequest("Detecting Faces in Image", URI, imgData, "application/octet-stream", "POST");
             Console.WriteLine();
 
             Console.WriteLine("Here's what lastResponse contains:");
@@ -227,7 +248,7 @@ namespace CSHttpClientSample
             }
         }
 
-        static async void MakeRequest(string purpose, string uri, byte[] reqBodyData, string bodyContentType, string method, Dictionary<string, string> requestParameters = null)
+        static async Task<string> MakeRequestAsync(string purpose, string uri, byte[] reqBodyData, string bodyContentType, string method, Dictionary<string, string> requestParameters = null)
         {
             var client = new HttpClient();
             var queryString = HttpUtility.ParseQueryString(string.Empty);
@@ -272,7 +293,8 @@ namespace CSHttpClientSample
                 Console.WriteLine(JsonPrettyPrint(contentString));
                 Console.WriteLine("\nPress any key to continue...");  //debug line
 
-                lastResponse = await response.Content.ReadAsStringAsync();
+                //lastResponse = await response.Content.ReadAsStringAsync();
+                return contentString;
             }
         }
 
