@@ -13,12 +13,12 @@ namespace CSHttpClientSample
 {
     static class Program
     {
-        const string subscriptionKey = "abe02e5cbec341c195ce55750e8b0765";
+        const string subscriptionKey = "a43530f777ee45599a06535c39b2fe4f";
 
         const string uriBase =
-            "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/";
+            "https://eastus.api.cognitive.microsoft.com/face/v1.0/";
 
-        const string personGroupId = "sample_group";
+        const string personGroupId = "sample_group_f";
         const string personGroupName = "Person Group using the Sample Data";
 
         const bool make_new_grp = true;
@@ -46,20 +46,22 @@ namespace CSHttpClientSample
         {
             if (make_new_grp) Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
             bool created_grp = await CreatePersonGroupAsync(make_new_grp);
+            Console.WriteLine(">    created_grp: " + created_grp);
             if (created_grp) Console.WriteLine("Then, I need to define the Persons in the PersonGroup. (only needs to be done the first time)");
             bool defined_ppl = await DefinePersonsInPersonGroupAsync(created_grp);
-            if (defined_ppl) Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
-            bool defined_faces = await DefineFacesForPersonsAsync(defined_ppl);
-            if (defined_faces) Console.WriteLine("Finally, I need to train the PersonGroup.");
-            bool startedTraining = await TrainPersonGroupAsync(defined_faces);
-            if (startedTraining)
-            {
-                bool finishedTraining = await CheckTrainingAsync(startedTraining);
-                while (!finishedTraining)
-                {
-                    finishedTraining = await CheckTrainingAsync(startedTraining);
-                }
-            }
+            Console.WriteLine(">    defined_ppl: " + defined_ppl);
+            //if (defined_ppl) Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
+            //bool defined_faces = await DefineFacesForPersonsAsync(defined_ppl);
+            //if (defined_faces) Console.WriteLine("Finally, I need to train the PersonGroup.");
+            //bool startedTraining = await TrainPersonGroupAsync(defined_faces);
+            //if (startedTraining)
+            //{
+            //    bool finishedTraining = await CheckTrainingAsync(startedTraining);
+            //    while (!finishedTraining)
+            //    {
+            //        finishedTraining = await CheckTrainingAsync(startedTraining);
+            //    }
+            //}
             //Console.ReadLine();
 
             /* Console.WriteLine("The PersonGroup is now ready to start identifying!");
@@ -104,7 +106,7 @@ namespace CSHttpClientSample
                 bool goodResponse;
 
                 string response = await MakeRequestAsync("Creating PersonGroup", URI, reqBody, "application/json", "PUT");
-                if (response == "")     // whatever the API response should be
+                if (response == "")
                 {
                     return true;
                 }
@@ -133,38 +135,61 @@ namespace CSHttpClientSample
         {
             if (proceed)
             {
-                string URI = uriBase + "persongroups/" + personGroupId + "/persons/";
-                // Persons to add: Family1-Dad, Family1-Daughter, Family1-Mom, Family1-Son, Family2-Lady, Family2-Man, Family3-Lady, Family3-Man
+                Dictionary<string, string> idAndResponse = await AddPersonsAsync();
 
-                byte[] f1Dad = Encoding.UTF8.GetBytes("{'name': 'Family1-Dad'}");
-                string f1DadRsp = await MakeRequestAsync("Adding Family1-Dad to PersonGroup", URI, f1Dad, "application/json", "POST");
+                int valid = 0;  //number of valid Persons
 
-                byte[] f1Daughter = Encoding.UTF8.GetBytes("{'name': 'Family1-Daughter'}");
-                string f1DaughterRsp = await MakeRequestAsync("Adding Family1-Daughter to PersonGroup", URI, f1Daughter, "application/json", "POST");
-
-                byte[] f1Mom = Encoding.UTF8.GetBytes("{'name': 'Family1-Mom'}");
-                string f1MomRsp = await MakeRequestAsync("Adding Family1-Mom to PersonGroup", URI, f1Mom, "application/json", "POST");
-
-                byte[] f1Son = Encoding.UTF8.GetBytes("{'name': 'Family1-Son'}");
-                string f1SonRsp = await MakeRequestAsync("Adding Family1-Son to PersonGroup", URI, f1Son, "application/json", "POST");
-            
-                if (f1DadRsp == ""  //TODO: change to the proper response condition
-                && f1DaughterRsp == ""
-                && f1MomRsp == ""
-                && f1SonRsp == "")  //long-term TODO: find a more elegant way to check a variable number of responses
+                foreach(KeyValuePair<string, string> entry in idAndResponse)
                 {
-                    return true;
+                    string rsp = entry.Value;
+                    JObject data = (JObject) JsonConvert.DeserializeObject(rsp);   //data should just be {"personId": "..."}
+                    string id = data["personId"].Value<string>();
+                    if (id != "")
+                    {
+                        valid++;
+                        Console.WriteLine(">    personId: " + id);
+                    }
+                    else
+                    {
+                        Console.WriteLine(">    There seems to be a problem with Defining '" + entry.Key + "'");
+                        Console.WriteLine(">    Response: " + rsp);
+                    }
                 }
-                else
-                {
-                    return false;
-                }
+
+                return valid > 0;
+
             }
             else
             {
                 Console.WriteLine("Something went wrong, so DefinePersonsInPersonGroupAsync() will not proceed.");
                 return false;
             }
+        }
+
+        static async Task<Dictionary<string, string>> AddPersonsAsync()
+        {
+            string URI = uriBase + "persongroups/" + personGroupId + "/persons/";
+            // Persons to add: Family1-Dad, Family1-Daughter, Family1-Mom, Family1-Son, Family2-Lady, Family2-Man, Family3-Lady, Family3-Man
+
+            Dictionary<string, string> idAndResponse = new Dictionary<string, string>();
+
+            byte[] f1Dad = Encoding.UTF8.GetBytes("{'name': 'Family1-Dad'}");
+            string f1DadRsp = await MakeRequestAsync("Adding Family1-Dad to PersonGroup", URI, f1Dad, "application/json", "POST");
+            idAndResponse.Add("Family1-Dad", f1DadRsp);
+                
+            byte[] f1Daughter = Encoding.UTF8.GetBytes("{'name': 'Family1-Daughter'}");
+            string f1DaughterRsp = await MakeRequestAsync("Adding Family1-Daughter to PersonGroup", URI, f1Daughter, "application/json", "POST");
+            idAndResponse.Add("Family1-Daughter", f1DaughterRsp);
+                                
+            byte[] f1Mom = Encoding.UTF8.GetBytes("{'name': 'Family1-Mom'}");
+            string f1MomRsp = await MakeRequestAsync("Adding Family1-Mom to PersonGroup", URI, f1Mom, "application/json", "POST");
+            idAndResponse.Add("Family1-Mom", f1MomRsp);
+                
+            byte[] f1Son = Encoding.UTF8.GetBytes("{'name': 'Family1-Son'}");
+            string f1SonRsp = await MakeRequestAsync("Adding Family1-Son to PersonGroup", URI, f1Son, "application/json", "POST");
+            idAndResponse.Add("Family1-Son", f1SonRsp);
+
+            return idAndResponse;
         }
 
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons/{personId}/persistedFaces[?userData][&targetFace]
@@ -232,7 +257,7 @@ namespace CSHttpClientSample
                 && mom2Rsp == ""
                 && mom3Rsp == ""
                 && son1Rsp == ""
-                && son2Rsp == ""
+                && son2Rsp == ""    //  long-term TODO: find a more elegant way to check a variable number of responses
                 && son3Rsp == "")   // clear indication of why there should be a more elegant way to do this...
                 {
                     return true;
@@ -276,9 +301,30 @@ namespace CSHttpClientSample
             }
         }
 
+        // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/training
         static async Task<bool> CheckTrainingAsync(bool proceed)
         {
-            return false;
+            if (proceed)
+            {
+                string URI = uriBase + "persongroups/" + personGroupId + "/training";
+
+                byte[] empty = Encoding.UTF8.GetBytes("{}");
+
+                string trainRsp = await MakeRequestAsync("Checking the status of the training", URI, empty, "application/json", "POST");
+                
+                if (trainRsp == "") //todo: change to proper response check
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
         }
 
         static async void DetectFaces()
@@ -302,12 +348,9 @@ namespace CSHttpClientSample
             //MakeRequest("Detecting Faces in Image", URI, imgData, "application/octet-stream", "POST");
             Console.WriteLine();
 
-            Console.WriteLine("Here's what lastResponse contains:");
-            Console.WriteLine(lastResponse);
-
             // parse imageIDs from the image we just detected
             string json = lastResponse;
-            JObject[] data = (JObject[])JsonConvert.DeserializeObject(json);    //data will be a list of Faces
+            JObject[] data = (JObject[]) JsonConvert.DeserializeObject(json);    //data will be a list of Faces
             foreach (JObject face in data)
             {
                 Console.WriteLine("Here's a faceId: " + face["faceId"].Value<string>());
@@ -331,7 +374,7 @@ namespace CSHttpClientSample
 
             var fullUri = uri + queryString;
 
-            Console.WriteLine("Full URI: " + fullUri);  // debug line
+            Console.WriteLine(">    Full URI: " + fullUri);  // debug line
 
             HttpResponseMessage response;
 
@@ -355,11 +398,10 @@ namespace CSHttpClientSample
                 string contentString = await response.Content.ReadAsStringAsync();
 
                 // Display the JSON response.
-                Console.WriteLine("\nResponse for " + purpose + ":\n");
-                Console.WriteLine(JsonPrettyPrint(contentString));
-                Console.WriteLine("\nPress any key to continue...");  //debug line
+                //Console.WriteLine("\nResponse for " + purpose + ":\n");
+                //Console.WriteLine(JsonPrettyPrint(contentString));
+                //Console.WriteLine("\nPress any key to continue...");  //debug line
 
-                //lastResponse = await response.Content.ReadAsStringAsync();
                 return contentString;
             }
         }
