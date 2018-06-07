@@ -262,14 +262,16 @@ namespace CSHttpClientSample
 
                 byte[] empty = Encoding.UTF8.GetBytes("{}");
 
-                string trainRsp = await MakeRequestAsync("Training the sample_group PersonGroup using the added images", URI, empty, "application/json", "POST");
+                string trainRsp = await MakeRequestAsync("Training the " + personGroupId + " PersonGroup using the added images", URI, empty, "application/json", "POST");
                 
-                if (trainRsp == "") //todo: change to proper response check
+                if (trainRsp == "")
                 {
                     return true;
                 }
                 else
                 {
+                    Console.WriteLine("Training Request failed.");
+                    Console.WriteLine("Response: " + trainRsp);
                     return false;
                 }
             }
@@ -289,7 +291,7 @@ namespace CSHttpClientSample
 
                 byte[] empty = Encoding.UTF8.GetBytes("{}");
 
-                string trainRsp = await MakeRequestAsync("Checking the status of the training", URI, empty, "application/json", "POST");
+                string trainRsp = await MakeRequestAsync("Checking the status of the training", URI, empty, "application/json", "GET");
                 
                 if (trainRsp == "") //todo: change to proper response check
                 {
@@ -366,6 +368,10 @@ namespace CSHttpClientSample
                 if (method.ToLower() == "post")
                 {
                     response = await client.PostAsync(fullUri, content);
+                }
+                else if (method.ToLower() == "get")
+                {
+                    response = await client.GetAsync(fullUri);
                 }
                 else
                 {
