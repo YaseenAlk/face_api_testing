@@ -45,11 +45,10 @@ namespace CSHttpClientSample
         static async Task Main()
         {
             Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
-            bool created = await CreatePersonGroupAsync(make_new_group);
-            Console.WriteLine("Then, I need to define the Persons in the PersonGroup. (only needs to be done the first time)");
-            //DefinePersonsInPersonGroup();
-            //Console.ReadLine();
-            //Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
+            bool created_grp = await CreatePersonGroupAsync(make_new_group);
+            if (created_grp) Console.WriteLine("Then, I need to define the Persons in the PersonGroup. (only needs to be done the first time)");
+            bool defined_ppl = await DefinePersonsInPersonGroupAsync(created_grp);
+            if (defined_ppl) Console.WriteLine("Next, I need to detect + add faces to each Person in the PersonGroup. (only needs to be done the first time)");
             //DefineFacesForPersons();
             //Console.ReadLine();
             //Console.WriteLine("Finally, I need to train the PersonGroup.");
@@ -84,6 +83,7 @@ namespace CSHttpClientSample
         /// <summary>
         /// 
         /// Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}
+        /// CreatePersonGroup() --> single API Call --> wait for response --> compare with ideal response --> return proceed bool
         /// </summary>
         /// <param name="imageFilePath">The image file to read.</param>
         /// <returns>The byte array of the image data.</returns>
@@ -108,33 +108,49 @@ namespace CSHttpClientSample
             }
             else
             {
-                Console.WriteLine("Something went wrong, so CreatePersonGroupAsync will not proceed.");
+                Console.WriteLine("Something went wrong, so CreatePersonGroupAsync() will not proceed.");
                 return false;
             }
             
         }
 
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons
-        static async void DefinePersonsInPersonGroup()
+        static async Task<bool> DefinePersonsInPersonGroupAsync(bool proceed)
         {
-            string URI = uriBase + "persongroups/" + personGroupId + "/persons/";
-            // Persons to add: Family1-Dad, Family1-Daughter, Family1-Mom, Family1-Son, Family2-Lady, Family2-Man, Family3-Lady, Family3-Man
+            if (proceed)
+            {
+                string URI = uriBase + "persongroups/" + personGroupId + "/persons/";
+                // Persons to add: Family1-Dad, Family1-Daughter, Family1-Mom, Family1-Son, Family2-Lady, Family2-Man, Family3-Lady, Family3-Man
 
-            byte[] f1Dad = Encoding.UTF8.GetBytes("{'name': 'Family1-Dad'}");
-            //MakeRequest("Adding Family1-Dad to PersonGroup", URI, f1Dad, "application/json", "POST");
-            Console.ReadLine();
+                byte[] f1Dad = Encoding.UTF8.GetBytes("{'name': 'Family1-Dad'}");
+                string f1DadRsp = await MakeRequestAsync("Adding Family1-Dad to PersonGroup", URI, f1Dad, "application/json", "POST");
 
-            byte[] f1Daughter = Encoding.UTF8.GetBytes("{'name': 'Family1-Daughter'}");
-            //MakeRequest("Adding Family1-Daughter to PersonGroup", URI, f1Daughter, "application/json", "POST");
-            Console.ReadLine();
+                byte[] f1Daughter = Encoding.UTF8.GetBytes("{'name': 'Family1-Daughter'}");
+                string f1DaughterRsp = await MakeRequestAsync("Adding Family1-Daughter to PersonGroup", URI, f1Daughter, "application/json", "POST");
 
-            byte[] f1Mom = Encoding.UTF8.GetBytes("{'name': 'Family1-Mom'}");
-            //MakeRequest("Adding Family1-Mom to PersonGroup", URI, f1Mom, "application/json", "POST");
-            Console.ReadLine();
+                byte[] f1Mom = Encoding.UTF8.GetBytes("{'name': 'Family1-Mom'}");
+                string f1MomRsp = await MakeRequestAsync("Adding Family1-Mom to PersonGroup", URI, f1Mom, "application/json", "POST");
 
-            byte[] f1Son = Encoding.UTF8.GetBytes("{'name': 'Family1-Son'}");
-            //MakeRequest("Adding Family1-Son to PersonGroup", URI, f1Son, "application/json", "POST");
+                byte[] f1Son = Encoding.UTF8.GetBytes("{'name': 'Family1-Son'}");
+                string f1SonRsp = await MakeRequestAsync("Adding Family1-Son to PersonGroup", URI, f1Son, "application/json", "POST");
             
+                if (f1DadRsp == ""  //TODO: change to the proper response condition
+                && f1DaughterRsp == ""
+                && f1MomRsp == ""
+                && f1SonRsp == "")  //long-term TODO: find a more elegant way to check a variable number of responses
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Something went wrong, so DefinePersonsInPersonGroupAsync will not proceed.");
+                return false;
+            }
         }
 
         //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons/{personId}/persistedFaces[?userData][&targetFace]
