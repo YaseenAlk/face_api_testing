@@ -14,10 +14,9 @@ namespace Identification
 {
     static class Program
     {
-        const string subscriptionKey = "a43530f777ee45599a06535c39b2fe4f";
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
 
-        const string uriBase =
-            "https://eastus.api.cognitive.microsoft.com/face/v1.0/";
+        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
 
         static string personGroupId;
         
@@ -120,15 +119,21 @@ namespace Identification
                 Console.WriteLine("---- Detected Face #" + faceNum + " ----");
                 string faceId = entry.Key;  //currently not using the faceId for anything. might be useful in the future
                 Dictionary<string, float> candidates = entry.Value;
-                
-                foreach(KeyValuePair<string, float> cand in candidates)
+                if (candidates.Count > 0)
                 {
-                    string candName = await IdToNameAsync(cand.Key);
-                    float confidence = cand.Value;
-                    if (candName != null)   //not sure if this is the proper way to wait for the task
+                    foreach(KeyValuePair<string, float> cand in candidates)
                     {
-                        Console.WriteLine("I am " + (confidence * 100) + "% sure that you are " + candName);
+                        string candName = await IdToNameAsync(cand.Key);
+                        float confidence = cand.Value;
+                        if (candName != null)   //not sure if this is the proper way to wait for the task
+                        {
+                            Console.WriteLine("I am " + (confidence * 100) + "% sure that you are " + candName);
+                        }
                     }
+                }
+                else
+                {
+                    Console.WriteLine("I am not confident enough in any candidates in PersonGroup '" + personGroupId + "' for this face.");
                 }
                 Console.WriteLine("--------------------------");
                 faceNum++;
@@ -297,6 +302,13 @@ namespace Identification
             }
 
             return sb.ToString().Trim();
+        }
+
+        static string ReadJsonStrFromFile(string path, string param)
+        {
+            string json = System.IO.File.ReadAllText(path);
+            JObject data = (JObject) JsonConvert.DeserializeObject(json);
+            return data[param].Value<string>();
         }
     }
 }

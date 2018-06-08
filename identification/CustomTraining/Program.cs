@@ -14,10 +14,9 @@ namespace CustomTraining
 {
     static class Program
     {
-        const string subscriptionKey = "a43530f777ee45599a06535c39b2fe4f";
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
 
-        const string uriBase =
-            "https://eastus.api.cognitive.microsoft.com/face/v1.0/";
+        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
 
         static string personGroupId = "sample_group_k";
         static string personGroupName = "Person Group using the Sample Data";
@@ -592,6 +591,13 @@ namespace CustomTraining
             }
 
             return sb.ToString().Trim();
+        }
+
+        static string ReadJsonStrFromFile(string path, string param)
+        {
+            string json = System.IO.File.ReadAllText(path);
+            JObject data = (JObject) JsonConvert.DeserializeObject(json);
+            return data[param].Value<string>();
         }
     }
 }

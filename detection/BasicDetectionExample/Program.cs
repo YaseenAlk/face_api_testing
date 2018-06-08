@@ -3,13 +3,15 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace BasicDetectionExample
 {
     static class Program
     {
         // Replace <Subscription Key> with your valid subscription key.
-        const string subscriptionKey = "a43530f777ee45599a06535c39b2fe4f";
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
 
         // NOTE: You must use the same region in your REST call as you used to
         // obtain your subscription keys. For example, if you obtained your
@@ -19,8 +21,7 @@ namespace BasicDetectionExample
         // Free trial subscription keys are generated in the westcentralus region.
         // If you use a free trial subscription key, you shouldn't need to change
         // this region.
-        const string uriBase =
-            "https://eastus.api.cognitive.microsoft.com/face/v1.0/detect/";
+        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
 
         static void Main()
         {
@@ -69,7 +70,7 @@ namespace BasicDetectionExample
                 "emotion,hair,makeup,occlusion,accessories,blur,exposure,noise";
 
             // Assemble the URI for the REST API Call.
-            string uri = uriBase + "?" + requestParameters;
+            string uri = uriBase + "detect?" + requestParameters;
 
             HttpResponseMessage response;
 
@@ -179,6 +180,13 @@ namespace BasicDetectionExample
             }
 
             return sb.ToString().Trim();
+        }
+
+        static string ReadJsonStrFromFile(string path, string param)
+        {
+            string json = System.IO.File.ReadAllText(path);
+            JObject data = (JObject) JsonConvert.DeserializeObject(json);
+            return data[param].Value<string>();
         }
     }
 }

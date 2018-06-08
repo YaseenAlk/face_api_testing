@@ -14,12 +14,11 @@ namespace SampleTraining
 {
     static class Program
     {
-        const string subscriptionKey = "a43530f777ee45599a06535c39b2fe4f";
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
 
-        const string uriBase =
-            "https://eastus.api.cognitive.microsoft.com/face/v1.0/";
+        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
 
-        const string personGroupId = "sample_group_w";
+        const string personGroupId = "potato";
         const string personGroupName = "Person Group using the Sample Data";
 
         const bool make_new_grp = true;
@@ -88,6 +87,7 @@ namespace SampleTraining
                 }
                 else
                 {
+                    Console.WriteLine("rsp: " + response);
                     return false;
                 }
             }
@@ -471,6 +471,13 @@ namespace SampleTraining
             }
 
             return sb.ToString().Trim();
+        }
+
+        static string ReadJsonStrFromFile(string path, string param)
+        {
+            string json = System.IO.File.ReadAllText(path);
+            JObject data = (JObject) JsonConvert.DeserializeObject(json);
+            return data[param].Value<string>();
         }
     }
 }
