@@ -35,7 +35,8 @@ namespace DetectionExample
         // NOTE: Free trial subscription keys are generated in the westcentralus region, so if you are using
         // a free trial subscription key, you should not need to change this region.
         private readonly IFaceServiceClient faceServiceClient =
-            new FaceServiceClient("abe02e5cbec341c195ce55750e8b0765", "https://westcentralus.api.cognitive.microsoft.com/face/v1.0");
+            new FaceServiceClient(ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey"), 
+            ReadJsonStrFromFile("../../api_access_key.txt", "uriBase"));
 
         Face[] faces;                   // The list of detected faces.
         String[] faceDescriptions;      // The list of descriptions for the detected faces.
@@ -253,6 +254,13 @@ namespace DetectionExample
 
             // Return the built string.
             return sb.ToString();
+        }
+
+        private static string ReadJsonStrFromFile(string path, string param)
+        {
+            string json = System.IO.File.ReadAllText(path);
+            JObject data = (JObject) JsonConvert.DeserializeObject(json);
+            return data[param].Value<string>();
         }
     }
 }
