@@ -1,0 +1,11 @@
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/bin/Debug/netcoreapp2.1/BasicIdentification.deps.json
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/bin/Debug/netcoreapp2.1/BasicIdentification.runtimeconfig.json
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/bin/Debug/netcoreapp2.1/BasicIdentification.runtimeconfig.dev.json
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/bin/Debug/netcoreapp2.1/BasicIdentification.dll
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/bin/Debug/netcoreapp2.1/BasicIdentification.pdb
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/obj/Debug/netcoreapp2.1/BasicIdentification.csprojAssemblyReference.cache
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/obj/Debug/netcoreapp2.1/BasicIdentification.csproj.CoreCompileInputs.cache
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/obj/Debug/netcoreapp2.1/BasicIdentification.AssemblyInfoInputs.cache
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/obj/Debug/netcoreapp2.1/BasicIdentification.AssemblyInfo.cs
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/obj/Debug/netcoreapp2.1/BasicIdentification.dll
+/Users/yaseen/Documents/GitHub/face_api_testing/identification/BasicIdentification/obj/Debug/netcoreapp2.1/BasicIdentification.pdb
