@@ -158,7 +158,7 @@ namespace CSHttpClientSample
 
             string rsp = await MakeRequestAsync("Retrieve Person associated with ID", URI, empty, "application/json", "GET");
             JObject data = (JObject) JsonConvert.DeserializeObject(rsp);   //data should be {"personId": "...", ...}
-            return data["name"].Value<string>();    //todo: make this error-prone
+            return data["name"].Value<string>();    //todo: make this error-proof
         }
 
        

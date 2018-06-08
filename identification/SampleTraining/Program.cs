@@ -19,10 +19,10 @@ namespace CSHttpClientSample
         const string uriBase =
             "https://eastus.api.cognitive.microsoft.com/face/v1.0/";
 
-        const string personGroupId = "sample_group_k";
+        const string personGroupId = "sample_group_w";
         const string personGroupName = "Person Group using the Sample Data";
 
-        const bool make_new_grp = false;
+        const bool make_new_grp = true;
 
         static ArrayList validPersonIds = new ArrayList();
         
