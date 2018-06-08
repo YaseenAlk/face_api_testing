@@ -16,6 +16,8 @@ using System.Windows.Shapes;
 using Microsoft.ProjectOxford.Common.Contract;
 using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace DetectionExample
 {
@@ -35,8 +37,8 @@ namespace DetectionExample
         // NOTE: Free trial subscription keys are generated in the westcentralus region, so if you are using
         // a free trial subscription key, you should not need to change this region.
         private readonly IFaceServiceClient faceServiceClient =
-            new FaceServiceClient(ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey"), 
-            ReadJsonStrFromFile("../../api_access_key.txt", "uriBase"));
+            new FaceServiceClient(ReadJsonStrFromFile(@"C:\Users\Yaseen Alkhafaji\Documents\GitHub\face_api_testing\api_access_key.txt", "subscriptionKey"), 
+            ReadJsonStrFromFile(@"C:\Users\Yaseen Alkhafaji\Documents\GitHub\face_api_testing\api_access_key.txt", "uriBase"));
 
         Face[] faces;                   // The list of detected faces.
         String[] faceDescriptions;      // The list of descriptions for the detected faces.
