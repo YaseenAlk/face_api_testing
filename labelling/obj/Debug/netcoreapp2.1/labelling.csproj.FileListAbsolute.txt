@@ -1,11 +1,11 @@
+/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.csprojAssemblyReference.cache
+/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.csproj.CoreCompileInputs.cache
+/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.AssemblyInfoInputs.cache
+/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.AssemblyInfo.cs
 /Users/yaseen/Documents/GitHub/face_matching/labelling/bin/Debug/netcoreapp2.1/labelling.deps.json
 /Users/yaseen/Documents/GitHub/face_matching/labelling/bin/Debug/netcoreapp2.1/labelling.runtimeconfig.json
 /Users/yaseen/Documents/GitHub/face_matching/labelling/bin/Debug/netcoreapp2.1/labelling.runtimeconfig.dev.json
 /Users/yaseen/Documents/GitHub/face_matching/labelling/bin/Debug/netcoreapp2.1/labelling.dll
 /Users/yaseen/Documents/GitHub/face_matching/labelling/bin/Debug/netcoreapp2.1/labelling.pdb
-/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.csprojAssemblyReference.cache
-/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.csproj.CoreCompileInputs.cache
-/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.AssemblyInfoInputs.cache
-/Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.AssemblyInfo.cs
 /Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.dll
 /Users/yaseen/Documents/GitHub/face_matching/labelling/obj/Debug/netcoreapp2.1/labelling.pdb

@@ -20,13 +20,18 @@ namespace Labelling
         
         const string FILE_EXTENSION = ".bmp";
         const int STARTING_INDEX = 1; // ffmpeg starts their image indexing at 1 for some reason
+        const string INT_FORMAT = "D5"; //D5 for frame00001, D3 for frame001, etc
+        const string DATA_FILE = "useful.txt"; // name of the file to save data into
 
         static string dir;
+
+        static Dictionary<int, string> detectedFrames = new Dictionary<int, string>();
 
         static async Task Main(string[] args)
         {
             Console.Write("Enter the directory containing the frame images: ");
             dir = Console.ReadLine();
+            if (!dir.EndsWith("/")) dir += "/";
 
             string[] dirs = Directory.GetFiles(dir, "*" + FILE_EXTENSION);
             int maxCount = dirs.Length;
@@ -35,8 +40,68 @@ namespace Labelling
             //var frames = Directory.EnumerateFiles(dir, FILE_EXTENSION);
             //int firstFaceIndex = await GetFirstFaceIndexAsync(maxCount);
             //Console.WriteLine("First face found is at index " + firstFaceIndex);
-            int num = await HowManyHaveFacesAsync(maxCount);
-            Console.WriteLine("Of the " + maxCount + " frames, " + num + " have detectable faces");
+            //int num = await HowManyHaveFacesAsync(maxCount);
+            //Console.WriteLine("Of the " + maxCount + " frames, " + num + " have detectable faces");
+            await FilterFrames(maxCount, true);
+        }
+
+        static async Task FilterFrames(int max, bool delete)
+        {
+            int index = STARTING_INDEX;
+            while (index <= max)
+            {
+                // response will be a list of faces:
+                // [{"faceId":"...", "faceAttributes":{"headPose": {"roll": x, "yaw": y, "pitch": 0}}}, {"faceId":"...", ...}]
+                string rsp = await UploadImageGetFaceAndYawAsync(index);
+                JArray faces = (JArray) JsonConvert.DeserializeObject(rsp);
+                if (faces.Count > 0)
+                {
+                    detectedFrames.Add(index, rsp);
+                    float yaw = (float) faces[0]["faceAttributes"]["headPose"]["yaw"];
+                    Console.WriteLine("Yaw for frame" + index.ToString(INT_FORMAT) + ": " + yaw);
+                }
+                else
+                {
+                    //Console.WriteLine("frame" + index.ToString(INT_FORMAT) + " has no Faces in it");
+                    if (delete)
+                    {
+                        string path = dir + "frame" + index.ToString(INT_FORMAT) + FILE_EXTENSION;
+                        Console.WriteLine("Deleting frame" + index.ToString(INT_FORMAT) + ".bmp because it does not have a detectable face");
+                        File.Delete(path);
+                    }
+                }
+                index ++;
+            }
+
+            // At this point, we have a dictionary full of frame indices and responses from the server
+            // Now it makes sense to save this information to a .txt file
+            
+            Console.WriteLine("Saving data... ");
+
+            List<string> dataToSave = new List<string>();
+            dataToSave.Add(String.Join(",", detectedFrames.Keys)); //first line: list of the useful indices
+            foreach(KeyValuePair<int, string> entry in detectedFrames)
+            {
+                string output = "frame" + entry.Key.ToString(INT_FORMAT) + ":" + entry.Value;
+                dataToSave.Add(output); //each additional line: frame#####:<json_response>
+            }
+            System.IO.File.WriteAllLines(dir + DATA_FILE, dataToSave);
+            
+            Console.WriteLine("Data saved!");
+        }
+
+        static async Task<string> UploadImageGetFaceAndYawAsync(int picNum)
+        {
+            string filePath = dir + "frame" + picNum.ToString(INT_FORMAT) + FILE_EXTENSION;   //ToString(INT_FORMAT) adds leading 0s
+
+            string URI = uriBase + "detect?";
+
+            byte[] img = GetImageAsByteArray(filePath);
+            Dictionary<string, string> requestParam = new Dictionary<string, string>();
+            requestParam.Add("returnFaceAttributes", "headPose");
+
+            string rsp = await MakeRequestAsync("Detect Face + Store Yaw value " + picNum.ToString(), URI, img, "application/octet-stream", "POST", requestParam);
+            return rsp;
         }
 
         static async Task<int> HowManyHaveFacesAsync(int max)
@@ -45,7 +110,9 @@ namespace Labelling
             int index = STARTING_INDEX;
             while (index <= max)
             {
-                count += await NumFacesInPicAsync(index);
+                int toAdd = await NumFacesInPicAsync(index);
+                if (toAdd > 1) Console.WriteLine("index #" + index + " has " + toAdd + " faces in it!");
+                count += (toAdd > 0) ? 1 : 0;
                 //Console.WriteLine("Current ratio: " + count + " / " + index);
                 index ++;
             }
@@ -67,10 +134,8 @@ namespace Labelling
         // Request URI: https://[location].api.cognitive.microsoft.com/face/v1.0/detect[?returnFaceId][&returnFaceLandmarks][&returnFaceAttributes]
         static async Task<int> NumFacesInPicAsync(int picNum)
         {
-            string filePath;    //not a big deal but maybe find a better way to do this in the future?
-            if (dir.EndsWith("/"))  filePath = dir + "frame" + picNum.ToString("D5") + FILE_EXTENSION;
-            else                    filePath = dir + "/frame" + picNum.ToString("D5") + FILE_EXTENSION;
-
+            string filePath = dir + "frame" + picNum.ToString(INT_FORMAT) + FILE_EXTENSION;
+            
             string URI = uriBase + "detect";
 
             byte[] img = GetImageAsByteArray(filePath);
