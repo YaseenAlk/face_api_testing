@@ -8,4 +8,4 @@ To run on your computer, add a file called `api_access_key.txt` to the repo fold
 	"uriBase":"https://[location].api.cognitive.microsoft.com/face/v1.0/"
 }
 ```
-where `subkey` is your API subscription key and `[location]` is the region (e.g. westcentralus, eastus, ...).
+where `<subkey>` is your API subscription key and `[location]` is the region (e.g. westcentralus, eastus, ...).
