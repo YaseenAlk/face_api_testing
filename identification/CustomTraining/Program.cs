@@ -22,6 +22,7 @@ namespace CustomTraining
         static string personGroupName = "Person Group using the Sample Data";
 
         const bool make_new_grp = false;
+        const string IMAGE_FILE_FORMAT = ".bmp";
 
         static ArrayList validPersonIds = new ArrayList();
         static bool pre_existing_grp = false;
@@ -40,7 +41,7 @@ namespace CustomTraining
 
         static async Task Main()
         {
-            Console.Write("Enter the name of the PersonGroup you would like to train: ");
+            Console.Write("Enter the id of the PersonGroup you would like to train: ");
             personGroupId = Console.ReadLine();
             Console.WriteLine(personGroupId);
             pre_existing_grp = await CheckIfGrpExistsAsync(personGroupId);
@@ -159,7 +160,7 @@ namespace CustomTraining
 
                 Dictionary<string, string> idAndResponse = await AddPersonsAsync();
 
-                int valid = 0;  //number of valid Persons
+                int valid = validPersonIds.Count;  //number of valid Persons
 
                 foreach(KeyValuePair<string, string> entry in idAndResponse)
                 {
@@ -198,7 +199,7 @@ namespace CustomTraining
             JArray people = (JArray) JsonConvert.DeserializeObject(listRsp);   //data should be [{"personId": "...", ...},{"personId":"...", ...}] 
             foreach (JObject person in people)
             {
-                validPersonIds.Add(people["personId"].Value<string>());
+                validPersonIds.Add(person["personId"].Value<string>());
             }
         }
 
@@ -282,6 +283,17 @@ namespace CustomTraining
                     string name = await IdToNameAsync(id);
                     if (name != "")
                     {
+                        // commented code requires you to enter the file path for every image you want to upload
+                        // the following just uploads all the images in a path
+                        Console.Write("Enter the path for the folder of images for " + name + ": ");
+                        string path = Console.ReadLine();
+                        string[] dirs = Directory.GetFiles(path, "*" + IMAGE_FILE_FORMAT);
+                        Console.WriteLine("There are " + dirs.Length + " frames in this directory...");
+                        foreach (string img in dirs)
+                        {
+                            await UploadImage(id, img);
+                        }
+                        /*
                         int faceNum = HowManyFaces(id, name);
                         for (int i = 0; i < faceNum; i++)
                         {
@@ -298,7 +310,8 @@ namespace CustomTraining
                                 Console.WriteLine("Something went wrong uploading Image #" + i + " for " + name);
                                 i--;
                             }
-                        }
+                        }*/
+                        
                     }
                     else    //no name associated with the id? API error?
                     {

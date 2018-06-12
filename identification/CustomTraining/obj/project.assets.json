@@ -978,11 +978,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/CustomTraining/CustomTraining.csproj",
+      "projectUniqueName": "/Users/yaseen/Documents/GitHub/face_matching/identification/CustomTraining/CustomTraining.csproj",
       "projectName": "CustomTraining",
-      "projectPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/CustomTraining/CustomTraining.csproj",
+      "projectPath": "/Users/yaseen/Documents/GitHub/face_matching/identification/CustomTraining/CustomTraining.csproj",
       "packagesPath": "/Users/yaseen/.nuget/packages/",
-      "outputPath": "/Users/yaseen/Documents/GitHub/face_api_testing/identification/CustomTraining/obj/",
+      "outputPath": "/Users/yaseen/Documents/GitHub/face_matching/identification/CustomTraining/obj/",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "/usr/local/share/dotnet/sdk/NuGetFallbackFolder"
