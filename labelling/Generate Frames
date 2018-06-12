@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Still a work in progress!
+
+vidlength=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "/users/$USER/Dropbox (MIT)/NIH2018_Data/Video/Session1/Compressed/p001_s1_1_edited.MP4")
+
+echo $vidlength
