@@ -27,6 +27,8 @@ where `-ss 00:0x:00` indicates the starting timestamp,
 
 and `"<path>/frame%05d.bmp"` is the output file path (the `%05d` is an int that increments by 1 for each frame, and has up to 4 leading 0s in front of the digit; so the folder will be full of files named `frame00001.bmp, frame00002.bmp, frame00003.bmp, ...`). Note that ffmpeg supports other image files, such as .jpg, .png, etc, and will format the image accordingly.
 
+---
+
 ### To halve the width and height of a video
 ```shell
 ffmpeg -i "<src>" -vf scale=iw/2:ih/2 "<output path>"
@@ -36,3 +38,11 @@ where `iw` is a variable for the input width and `ih` is a variable for the inpu
 [Here](https://trac.ffmpeg.org/wiki/Scaling) is more information on scaling
 
 And [here](https://ffmpeg.org/ffmpeg.html) is the full site for ffmpeg documentation
+
+---
+
+### To get the duration of a video using ffprobe (requires ffprobe to also be installed)
+```shell
+ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "<video_path>"
+```
+[Here](https://trac.ffmpeg.org/wiki/FFprobeTips) is a tips page for ffprobe
