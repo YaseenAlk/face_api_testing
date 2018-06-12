@@ -17,19 +17,17 @@
 #       for every file ending with the .MP4 extension
 #           Split the file name by "_" and store the first string in a var called name
 #           if name starts with "p0"
-#               Make the dir /Users/$USER/Desktop/ExtractedVidFrames/Banneker/$name if it doesn't already exist
-#               count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/Banneker/$name and store in a variable called count
-#               Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/Banneker/$name called (count + 1)
-#               Enter the newly created folder
+#               Make the dir /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$i/$name if it doesn't already exist
+#               count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$i/$name and store in a variable called count
+#               Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$i/$name called (count + 1)
 #           else if name starts with "p1"
-#               Make the dir /Users/$USER/Desktop/ExtractedVidFrames/JFK/$name if it doesn't already exist
-#               count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/JFK/$name and store in a variable called count
-#               Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/JFK/$name called (count + 1)
-#               Enter the newly created folder
+#               Make the dir /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$i/$name if it doesn't already exist
+#               count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$i/$name and store in a variable called count
+#               Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$i/$name called (count + 1)
 #           else
-#               Make the dir /Users/$USER/Desktop/ExtractedVidFrames/Unknown/$name if it doesn't already exist
-#               count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/Unknown/$name and store in a variable called count
-#               Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/Unknown/$name called (count + 1)
+#               Make the dir /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$i/$name if it doesn't already exist
+#               count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$i/$name and store in a variable called count
+#               Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$i/$name called (count + 1)
 #           
 #           calculate video duration using ffprobe and store it in a var called duration
 #           create variables called startTime and durationTime
@@ -46,6 +44,71 @@
 
 pathToAllVids="/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video/"
 
-vidlength=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "/users/$USER/Dropbox (MIT)/NIH2018_Data/Video/Session1/Compressed/p001_s1_1_edited.MP4")
+mkdir /Users/$USER/Desktop/ExtractedVidFrames
+mkdir /Users/$USER/Desktop/ExtractedVidFrames/Banneker
+mkdir /Users/$USER/Desktop/ExtractedVidFrames/JFK
+mkdir /Users/$USER/Desktop/ExtractedVidFrames/Unknown
 
-echo $vidlength
+cd "/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video"
+
+#this is needed for the fileName for-loop
+shopt -s nullglob
+
+for s in `seq 1 5`;
+do
+    cd "$PWD/Session$s/"
+    mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/
+    mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/
+    mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/
+
+    for fileName in *.mp4 *.MP4; do
+        #split name and store into #splitName:
+        OIFS=$IFS
+        IFS='_' read -r -a splitName <<< "$fileName"
+        IFS=$OIFS
+
+        #store first element into $name:
+        name=${splitName[0]}
+        frameDir=""
+
+        if [[ $name == p0* ]]; then
+            mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name/
+            count=$(ls -l /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name | grep -c ^d)
+            frameDir="/Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name/$(($count + 1))"
+            mkdir -p $frameDir
+        elif [[ $name == p1* ]]; then
+            mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name/
+            count=$(ls -l /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name | grep -c ^d)
+            frameDir="/Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name/$(($count + 1))"
+            mkdir -p $frameDir
+        else
+            mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name/
+            count=$(ls -l /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name | grep -c ^d)
+            frameDir="/Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name/$(($count + 1))"
+            mkdir -p $frameDir
+        fi
+
+        duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$pathToAllVids/Session$s/$fileName")
+        
+        startTime=0
+        durationTime=0
+        if (( $(echo "$duration > 420.0" | bc -l) )); then
+            echo "Yep, duration > 420"
+            startTime=120.0
+            durationTime=300.0
+        elif (( $(echo "$duration > 300.0" | bc -l) )); then
+            echo "Yep, duration > 300"
+            startTime=$(echo $duration - 300.0 | bc)
+            durationTime=300.0
+        else
+            echo Yep, else
+            startTime=0
+            durationTime=$duration
+        fi
+
+        ffmpeg -ss $startTime -i "$pathToAllVids/Session$s/$fileName" -t $durationTime -vf fps=3 scale=iw/2:ih/2 "$frameDir/frame%05d.bmp"
+
+    done
+
+    cd "/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video"
+done
