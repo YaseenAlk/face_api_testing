@@ -15,20 +15,28 @@ namespace Labelling
     class Program
     {
         static readonly string subscriptionKey = ReadJsonStrFromFile("../api_access_key.txt", "subscriptionKey");
-
         static readonly string uriBase = ReadJsonStrFromFile("../api_access_key.txt", "uriBase");
         
         const string FILE_EXTENSION = ".bmp";
         const int STARTING_INDEX = 1; // ffmpeg starts their image indexing at 1 for some reason
         const string INT_FORMAT = "D5"; //D5 for frame00001, D3 for frame001, etc
-        const string DATA_FILE = "useful.txt"; // name of the file to save data into
+
+        const string USEFUL_DATA_FILE = "useful.txt"; // name of the file to save useful frames into
+        const string LIBRARY_DATA_FILE = "library.txt"; // name of the file to save library-worthy frames into
+        
+        
+        const decimal MIN_YAW_DIFF = 0.5m; //units are in degrees, and range is [-90, 90]
+        const int FRAMES_PER_YAW_VAL = 2; //number of frames to maintain for a small yaw value range dictated by MIN_YAW_DIFF
+        static Dictionary<decimal, int> libraryCount;
 
         static string dir;
 
-        static Dictionary<int, string> detectedFrames = new Dictionary<int, string>();
+        static Dictionary<int, string> detectedFrames;
+        static Dictionary<int, string> libraryFrames;
 
         static async Task Main(string[] args)
         {
+            InitializeInstanceData();
             Console.Write("Enter the directory containing the frame images: ");
             dir = Console.ReadLine();
             if (!dir.EndsWith("/")) dir += "/";
@@ -42,16 +50,131 @@ namespace Labelling
             //Console.WriteLine("First face found is at index " + firstFaceIndex);
             //int num = await HowManyHaveFacesAsync(maxCount);
             //Console.WriteLine("Of the " + maxCount + " frames, " + num + " have detectable faces");
-            await FilterFrames(maxCount, true);
+            if (!File.Exists(dir + USEFUL_DATA_FILE))
+                await FilterDetectableFacesAsync(maxCount, true); //for non-detectable faces
+            else    //not sure why you would run the program again, but just in case
+                LoadDetectableFaceList();
+            PrepareToFilterLibrary();
+            FilterLibraryFaces();   //once we have a datafile with yaw values saved, this should only need to happen locally (and should be very fast)
         }
 
-        static async Task FilterFrames(int max, bool delete)
+        static void InitializeInstanceData()
         {
+            detectedFrames = new Dictionary<int, string>();
+            libraryFrames = new Dictionary<int, string>();
+            libraryCount = new Dictionary<decimal, int>();
+        }
+
+        // generates a dictionary of rounded range values
+        // each key represents a range, and each value represents the number of frames with yaw vals in that range
+        // so for the key 0, the range is -MIN_YAW_DIFF to MIN_YAW_DIFF;
+        // for the key 89, the range is 89-MIN_YAW_DIFF to 89+MIN_YAW_DIFF
+        static void PrepareToFilterLibrary()
+        {
+            Console.WriteLine("Generating dictionary for library...");
+            for (decimal d = -90m; d <= 90m; d += MIN_YAW_DIFF*2)
+            {
+                libraryCount.Add(d, 0);
+            }
+            Console.WriteLine("Done generating dictionary!");
+        }
+
+        static void FilterLibraryFaces()
+        {
+            Console.WriteLine("Filtering Faces to use for the library...");
+
+            if (Directory.Exists(dir + "training/"))
+            {
+                Console.WriteLine("The training directory seems to already exist. I'm going to assume that you would like to regenerate the library, so I will first clear the existing training folder.");
+                System.IO.DirectoryInfo di = new DirectoryInfo(dir + "training/");
+                foreach (FileInfo file in di.EnumerateFiles())
+                {
+                    file.Delete(); 
+                }
+                Console.WriteLine("\"training\" directory cleared.");
+            }
+            else
+            {
+                Directory.CreateDirectory(dir + "training/");
+            }
+
+            foreach (KeyValuePair<int, string> frame in detectedFrames)
+            {
+                int frameNumber = frame.Key;
+                string frameData = frame.Value;
+                if (IsWorthAdding(frameData))
+                {
+                    string fromPath = dir + "frame" + frameNumber.ToString(INT_FORMAT) + FILE_EXTENSION;
+                    string toDir = dir + "training/";
+                    File.Copy(fromPath, toDir, true);
+                    libraryFrames.Add(frameNumber, frameData);  //not sure if there's a more efficient way to do this
+                    UpdateLibraryCount(frameData);
+                }
+            }
+            Console.WriteLine("Done filtering library Faces!");
+
+            // save training data in a separate txt file
+            string dataSavePath = dir + LIBRARY_DATA_FILE;
+            ExportFrameData(libraryFrames, dataSavePath);
+        }
+
+        static bool IsWorthAdding(string data)
+        {
+            // to round x to the nearest n (also works for decimals!):
+            // Math.Round(x / n) * n
+
+            float yaw = GetYawFromFaceListJSON(data);
+            decimal n = MIN_YAW_DIFF*2;
+            decimal roundedRangeVal = Math.Round((decimal) yaw / n) * n;
+            return libraryCount[roundedRangeVal] < FRAMES_PER_YAW_VAL;
+        }
+
+        static void UpdateLibraryCount(string data)
+        {
+            float yaw = GetYawFromFaceListJSON(data);
+            decimal n = MIN_YAW_DIFF*2;
+            decimal roundedRangeVal = Math.Round((decimal) yaw / n) * n;
+            libraryCount[roundedRangeVal]++;
+        }
+
+        // Note: This always returns the yaw val for the FIRST Face in the FaceList
+        // This isn't usually relevant (because almost all frames will only have 1 face)
+        // but occasionally, some frames may have other people in them
+        // In which case, the first Face in the FaceList is always the biggest Face in the frame
+        static float GetYawFromFaceListJSON(string json)
+        {
+            // Assuming json is a string in the form
+            // [{"faceId":"...", ..., "faceAttributes":{"headPose": {"roll": x, "yaw": y, "pitch": 0}}}, {"faceId":"...", ...}]
+            JArray faces = (JArray) JsonConvert.DeserializeObject(json);
+            return (float) faces[0]["faceAttributes"]["headPose"]["yaw"];
+        }
+
+        static void LoadDetectableFaceList()
+        {
+            Console.WriteLine("Loading useful FaceList...");
+            string[] lines = System.IO.File.ReadAllLines(dir + USEFUL_DATA_FILE);
+            int[] usefulFrames = Array.ConvertAll(lines[0].Split(","), int.Parse);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                // a line might look like this
+                // "frame00000:[{"faceId":"...","faceRectangle":...,"faceAttributes":{"headPose":{"pitch":0.0,"roll":x,"yaw":y}}}]"
+                // we need to skip the string "frame00000:" to get the JSON response
+                int padding = Int32.Parse(INT_FORMAT.Substring(1));
+                int skip = "frame".Length + padding + 1;    //+1 for the colon
+                detectedFrames.Add(usefulFrames[i-1], lines[i].Substring(skip));
+            }
+            Console.WriteLine("List loaded.");
+        }
+
+        // this is to filter non-detectable faces out
+        static async Task FilterDetectableFacesAsync(int max, bool delete)
+        {
+            Console.WriteLine("Filtering frames with detectable Faces...");
             int index = STARTING_INDEX;
             while (index <= max)
             {
                 // response will be a list of faces:
-                // [{"faceId":"...", "faceAttributes":{"headPose": {"roll": x, "yaw": y, "pitch": 0}}}, {"faceId":"...", ...}]
+                // [{"faceId":"...", ..., "faceAttributes":{"headPose": {"roll": x, "yaw": y, "pitch": 0}}}, {"faceId":"...", ...}]
                 string rsp = await UploadImageGetFaceAndYawAsync(index);
                 JArray faces = (JArray) JsonConvert.DeserializeObject(rsp);
                 if (faces.Count > 0)
@@ -72,20 +195,26 @@ namespace Labelling
                 }
                 index ++;
             }
+            Console.WriteLine("Done filtering detectable faces!");
 
             // At this point, we have a dictionary full of frame indices and responses from the server
             // Now it makes sense to save this information to a .txt file
-            
+            string dataSavePath = dir + USEFUL_DATA_FILE;
+            ExportFrameData(detectedFrames, dataSavePath);
+        }
+
+        static void ExportFrameData(Dictionary<int, string> frameList, string pathToSave)
+        {
             Console.WriteLine("Saving data... ");
 
             List<string> dataToSave = new List<string>();
-            dataToSave.Add(String.Join(",", detectedFrames.Keys)); //first line: list of the useful indices
-            foreach(KeyValuePair<int, string> entry in detectedFrames)
+            dataToSave.Add(String.Join(",", frameList.Keys)); //first line: list of the useful indices
+            foreach(KeyValuePair<int, string> entry in frameList)
             {
                 string output = "frame" + entry.Key.ToString(INT_FORMAT) + ":" + entry.Value;
                 dataToSave.Add(output); //each additional line: frame#####:<json_response>
             }
-            System.IO.File.WriteAllLines(dir + DATA_FILE, dataToSave);
+            System.IO.File.WriteAllLines(pathToSave, dataToSave);
             
             Console.WriteLine("Data saved!");
         }
