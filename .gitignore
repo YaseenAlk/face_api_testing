@@ -14,6 +14,10 @@ identification/.vscode/
 identification/CustomTraining/bin/
 identification/CustomTraining/obj/
 
+identification/CustomTrainingArgs/.vs/
+identification/CustomTrainingArgs/bin/
+identification/CustomTrainingArgs/obj/
+
 identification/SampleTraining/.vs/
 identification/SampleTraining/bin/
 identification/SampleTraining/obj/
@@ -21,6 +25,10 @@ identification/SampleTraining/obj/
 identification/Identification/.vs/
 identification/Identification/bin/
 identification/Identification/obj/
+
+TerminalUtils/.vs/
+TerminalUtils/bin/
+TerminalUtils/obj/
 
 labelling/FilteringExecutable/bin/
 labelling/FilteringExecutable/obj/
