@@ -109,7 +109,7 @@ do
 
         ffmpeg -ss $startTime -i "$pathToAllVids/Session$s/$fileName" -t $durationTime -vf fps=3,scale=iw/2:ih/2 "$frameDir/frame%05d.bmp"
         cd $pathToFilterPrgm
-        dotnet FilteringTerminalArgs $frameDir -no_output
+        dotnet FilteringTerminalArgs.dll $frameDir -no_output
         echo Done processing $fileName! 
     done
 
