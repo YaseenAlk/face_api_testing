@@ -14,9 +14,11 @@ namespace Labelling
 {
     class Program
     {
-        static readonly string subscriptionKey = ReadJsonStrFromFile("../api_access_key.txt", "subscriptionKey");
-        static readonly string uriBase = ReadJsonStrFromFile("../api_access_key.txt", "uriBase");
-        
+        // for this version, just put api_access_key.txt in the same 
+        static readonly string subscriptionKey = ReadJsonStrFromFile("api_access_key.txt", "subscriptionKey");
+        static readonly string uriBase = ReadJsonStrFromFile("api_access_key.txt", "uriBase");
+
+        //TODO: maybe convert these constants into command line arguments?        
         const string FILE_EXTENSION = ".bmp";
         const int STARTING_INDEX = 1; // ffmpeg starts their image indexing at 1 for some reason
         const string INT_FORMAT = "D5"; //D5 for frame00001, D3 for frame001, etc
@@ -34,16 +36,35 @@ namespace Labelling
         static Dictionary<int, string> detectedFrames;
         static Dictionary<int, string> libraryFrames;
 
+        static bool no_output = false;
+
+        // Usage: dotnet FilteringTerminalArgs <frame img dir> [-no_output (optional)]
         static async Task Main(string[] args)
         {
+            if (args.Length < 1)
+            {
+                Console.WriteLine("Usage: dotnet FilteringTerminalArgs <frame img dir>");
+                return;
+            }
+
+            if (subscriptionKey == "" || uriBase == "")
+            {
+                Console.WriteLine("Please make sure that api_access_key.txt is in the correct location.");
+                return;
+            }
+
+            if (Array.IndexOf(args, "-no_output") > -1)
+            {
+                no_output = true;
+            }
+
             InitializeInstanceData();
-            Console.Write("Enter the directory containing the frame images: ");
-            dir = Console.ReadLine();
+            dir = args[0];
             if (!dir.EndsWith("/")) dir += "/";
 
             string[] dirs = Directory.GetFiles(dir, "*" + FILE_EXTENSION);
             int maxCount = dirs.Length;
-            Console.WriteLine("There are " + maxCount + " frames in this directory...");
+            if (!no_output) Console.WriteLine("There are " + maxCount + " frames in this directory...");
 
             //var frames = Directory.EnumerateFiles(dir, FILE_EXTENSION);
             //int firstFaceIndex = await GetFirstFaceIndexAsync(maxCount);
@@ -71,27 +92,27 @@ namespace Labelling
         // for the key 89, the range is 89-MIN_YAW_DIFF to 89+MIN_YAW_DIFF
         static void PrepareToFilterLibrary()
         {
-            Console.WriteLine("Generating dictionary for library...");
+            if (!no_output) Console.WriteLine("Generating dictionary for library...");
             for (decimal d = -90m; d <= 90m; d += MIN_YAW_DIFF*2)
             {
                 libraryCount.Add(d, 0);
             }
-            Console.WriteLine("Done generating dictionary!");
+            if (!no_output) Console.WriteLine("Done generating dictionary!");
         }
 
         static void FilterLibraryFaces()
         {
-            Console.WriteLine("Filtering Faces to use for the library...");
+            if (!no_output) Console.WriteLine("Filtering Faces to use for the library...");
 
             if (Directory.Exists(dir + "training/"))
             {
-                Console.WriteLine("The training directory seems to already exist. I'm going to assume that you would like to regenerate the library, so I will first clear the existing training folder.");
+                if (!no_output) Console.WriteLine("The training directory seems to already exist. I'm going to assume that you would like to regenerate the library, so I will first clear the existing training folder.");
                 System.IO.DirectoryInfo di = new DirectoryInfo(dir + "training/");
                 foreach (FileInfo file in di.EnumerateFiles())
                 {
                     file.Delete(); 
                 }
-                Console.WriteLine("\"training\" directory cleared.");
+                if (!no_output) Console.WriteLine("\"training\" directory cleared.");
             }
             else
             {
@@ -111,7 +132,7 @@ namespace Labelling
                     UpdateLibraryCount(frameData);
                 }
             }
-            Console.WriteLine("Done filtering library Faces!");
+            if (!no_output) Console.WriteLine("Done filtering library Faces!");
 
             // save training data in a separate txt file
             string dataSavePath = dir + LIBRARY_DATA_FILE;
@@ -151,7 +172,7 @@ namespace Labelling
 
         static void LoadDetectableFaceList()
         {
-            Console.WriteLine("Loading useful FaceList...");
+            if (!no_output) Console.WriteLine("Loading useful FaceList...");
             string[] lines = System.IO.File.ReadAllLines(dir + USEFUL_DATA_FILE);
             int[] usefulFrames = Array.ConvertAll(lines[0].Split(","), int.Parse);
             for (int i = 1; i < lines.Length; i++)
@@ -163,13 +184,13 @@ namespace Labelling
                 int skip = "frame".Length + padding + 1;    //+1 for the colon
                 detectedFrames.Add(usefulFrames[i-1], lines[i].Substring(skip));
             }
-            Console.WriteLine("List loaded.");
+            if (!no_output) Console.WriteLine("List loaded.");
         }
 
         // this is to filter non-detectable faces out
         static async Task FilterDetectableFacesAsync(int max, bool delete)
         {
-            Console.WriteLine("Filtering frames with detectable Faces...");
+            if (!no_output) Console.WriteLine("Filtering frames with detectable Faces...");
             int index = STARTING_INDEX;
             while (index <= max)
             {
@@ -181,7 +202,7 @@ namespace Labelling
                 {
                     detectedFrames.Add(index, rsp);
                     float yaw = (float) faces[0]["faceAttributes"]["headPose"]["yaw"];
-                    Console.WriteLine("Yaw for frame" + index.ToString(INT_FORMAT) + ": " + yaw);
+                    if (!no_output) Console.WriteLine("Yaw for frame" + index.ToString(INT_FORMAT) + ": " + yaw);
                 }
                 else
                 {
@@ -189,13 +210,13 @@ namespace Labelling
                     if (delete)
                     {
                         string path = dir + "frame" + index.ToString(INT_FORMAT) + FILE_EXTENSION;
-                        Console.WriteLine("Deleting frame" + index.ToString(INT_FORMAT) + ".bmp because it does not have a detectable face");
+                        if (!no_output) Console.WriteLine("Deleting frame" + index.ToString(INT_FORMAT) + ".bmp because it does not have a detectable face");
                         File.Delete(path);
                     }
                 }
                 index ++;
             }
-            Console.WriteLine("Done filtering detectable faces!");
+            if (!no_output) Console.WriteLine("Done filtering detectable faces!");
 
             // At this point, we have a dictionary full of frame indices and responses from the server
             // Now it makes sense to save this information to a .txt file
@@ -205,7 +226,7 @@ namespace Labelling
 
         static void ExportFrameData(Dictionary<int, string> frameList, string pathToSave)
         {
-            Console.WriteLine("Saving data... ");
+            if (!no_output) Console.WriteLine("Saving data... ");
 
             List<string> dataToSave = new List<string>();
             dataToSave.Add(String.Join(",", frameList.Keys)); //first line: list of the useful indices
@@ -216,7 +237,7 @@ namespace Labelling
             }
             System.IO.File.WriteAllLines(pathToSave, dataToSave);
             
-            Console.WriteLine("Data saved!");
+            if (!no_output) Console.WriteLine("Data saved!");
         }
 
         static async Task<string> UploadImageGetFaceAndYawAsync(int picNum)
@@ -240,7 +261,7 @@ namespace Labelling
             while (index <= max)
             {
                 int toAdd = await NumFacesInPicAsync(index);
-                if (toAdd > 1) Console.WriteLine("index #" + index + " has " + toAdd + " faces in it!");
+                if (toAdd > 1) if (!no_output) Console.WriteLine("index #" + index + " has " + toAdd + " faces in it!");
                 count += (toAdd > 0) ? 1 : 0;
                 //Console.WriteLine("Current ratio: " + count + " / " + index);
                 index ++;
@@ -414,6 +435,10 @@ namespace Labelling
 
         static string ReadJsonStrFromFile(string path, string param)
         {
+            if (!File.Exists(path))
+            {
+                return "";
+            }
             string json = System.IO.File.ReadAllText(path);
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();
