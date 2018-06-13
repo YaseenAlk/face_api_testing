@@ -34,15 +34,19 @@
 #           if duration is greater than 7 minutes
 #               set startTime to 2min and durationTime to 5min
 #           else if duration is greater than 5 minutes
-#               set startTime to (duration minus 5 minutes), and set durationTime to 5 min
+#               set startTime to (duration minus 5 minutes)/2, and set durationTime to 5 min
 #           else
 #               set startTime to 0
 #               set durationTime to duration
 #
 #           use ffmpeg to generate frames, starting at startTime and lasting durationTime, cutting the height and width in half, at 3 fps, using the name "frame%05d.bmp" and stored in the current folder
+#           cd to the folder containing the Filtering program
+#           run Filtering program to filter the newly created frames (thus saving space)
+#           echo Done processing $fileName!
 #       cd to NIH2018_Data/Video
 
 pathToAllVids="/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video/"
+pathToFilterPrgm="/Users/$USER/Desktop/Filtering/"
 
 mkdir /Users/$USER/Desktop/ExtractedVidFrames
 mkdir /Users/$USER/Desktop/ExtractedVidFrames/Banneker
@@ -93,21 +97,20 @@ do
         startTime=0
         durationTime=0
         if (( $(echo "$duration > 420.0" | bc -l) )); then
-            echo "Yep, duration > 420"
             startTime=120.0
             durationTime=300.0
         elif (( $(echo "$duration > 300.0" | bc -l) )); then
-            echo "Yep, duration > 300"
-            startTime=$(echo $duration - 300.0 | bc)
+            startTime=$(echo "($duration - 300.0)/2" | bc -l)
             durationTime=300.0
         else
-            echo Yep, else
             startTime=0
             durationTime=$duration
         fi
 
-        ffmpeg -ss $startTime -i "$pathToAllVids/Session$s/$fileName" -t $durationTime -vf fps=3 scale=iw/2:ih/2 "$frameDir/frame%05d.bmp"
-
+        ffmpeg -ss $startTime -i "$pathToAllVids/Session$s/$fileName" -t $durationTime -vf fps=3,scale=iw/2:ih/2 "$frameDir/frame%05d.bmp"
+        cd $pathToFilterPrgm
+        dotnet FilteringTerminalArgs $frameDir -no_output
+        echo Done processing $fileName! 
     done
 
     cd "/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video"
