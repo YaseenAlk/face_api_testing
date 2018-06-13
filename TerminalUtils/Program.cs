@@ -10,7 +10,7 @@ using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace GetFirstPersonIdFromName
+namespace TerminalUtils
 {
     class Program
     {
