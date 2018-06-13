@@ -9,6 +9,7 @@
 # -- Uploading Images --
 #   for every value in $schools: (Banneker, JFK)
 #       store the school name in a var called schoolName
+#       set schoolName to all lowercase (personGroupIds can only be lowercase)
 #       for i from 1 to 5:
 #           Enter the folder /Users/$USER/Desktop/ExtractedVidFrames/$schoolName/Session$i/
 #           for every folder in the directory: (p001, p002, ... or p100, p102, ...)
@@ -18,9 +19,57 @@
 #                   create the person in personGroup $schoolName with the name $pName (using the -createPerson TerminalUtils action) and store the returned id in pId
 #               for every folder in the directory:
 #                   store the folder name in a var called imgPath
-#                   run the -uploadImages TerminalUtils action with personGroupId $schoolName, personId $pId, image path $imgPath
+#                   run the -uploadImages TerminalUtils action with personGroupId $schoolName, personId $pId, image path $imgPath/training
 
 # -- Training --
 #   for every value in $schools: (Banneker, JFK)
 #       store the school name in a var called schoolName
 #       train the dataset using the -train TerminalUtils action with personGroupId $schoolName
+
+# Notes:
+# 1) Every time you want to run TerminalUtils, you need to cd to $pathToTerminalUtils
+# 2) personGroupIds must always be lowercase, so that means that you can't put it in a request URL unless its also lowercase
+# 3) This script assumes that each schoolName already has a personGroup created for it
+# 4) If you attempt to train a person group with no images in it, then the training will fail, and the program will stay in an infinite loop
+
+
+#this is needed for the fileName for-loop
+shopt -s nullglob
+
+pathToTerminalUtils="/Users/$USER/Desktop/TerminalUtils"
+pathToExtractedVids="/Users/$USER/Desktop/ExtractedVidFrames"
+
+# In this case, the script will always be in $pathToTerminalUtils, so no need to cd every time we want to use TerminalUtils
+cd "$pathToTerminalUtils"
+
+declare -a schools=("Banneker" "JFK")
+
+# -- Uploading Images --
+for schoolName in "${schools[@]}"
+do
+    schoolName=$(echo "$schoolName" | tr '[:upper:]' '[:lower:]')
+    for s in `seq 1 5`;
+    do
+        for pName in $pathToExtractedVids/$schoolName/Session$s/*/
+        do
+            pName=${pName%*/}
+            pNameWithoutPath=${pName##*/}
+            pId=$(dotnet TerminalUtils.dll -getId $schoolName $pNameWithoutPath)
+            if [ $pId = "null" ]; then
+               pId=$(dotnet TerminalUtils.dll -createPerson $schoolName $pNameWithoutPath)
+            fi
+
+            for imgPath in $pName/*/
+            do
+                dotnet TerminalUtils.dll -uploadImages $schoolName $pId $imgPath/training
+            done
+        done
+    done
+done
+
+# -- Training --
+for schoolName in "${schools[@]}"
+do
+    schoolName=$(echo "$schoolName" | tr '[:upper:]' '[:lower:]')
+    dotnet TerminalUtils.dll -train $schoolName
+done
