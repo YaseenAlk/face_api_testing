@@ -4,15 +4,23 @@
 
 #   Pseudocode:
 
-#   for every folder in /Users/$USER/Desktop/ExtractedVidFrames/: (Banneker, JFK, Unknown)
-#       store the folder name in a var called schoolName
+#   Make an array called schools with values Banneker and JFK
+
+# -- Uploading Images --
+#   for every value in $schools: (Banneker, JFK)
+#       store the school name in a var called schoolName
 #       for i from 1 to 5:
-#           Enter the folder /Session + i + /
-#           for every folder in the directory: (p001, p002, ... or p100, p102, ... or empty)
+#           Enter the folder /Users/$USER/Desktop/ExtractedVidFrames/$schoolName/Session$i/
+#           for every folder in the directory: (p001, p002, ... or p100, p102, ...)
 #               store the folder name in a var called pName
 #               get the id using the -getId TerminalUtils action and store in a var called pId
 #               if pId equals null:
-#                   create the person in personGroup $schoolName with the name $pName and store the returned id in pId
+#                   create the person in personGroup $schoolName with the name $pName (using the -createPerson TerminalUtils action) and store the returned id in pId
 #               for every folder in the directory:
 #                   store the folder name in a var called imgPath
-#                   run the CustomTrainingArgs program with personGroupId $schoolName, personId $pId, image path $imgPath and the -no_training flag
+#                   run the -uploadImages TerminalUtils action with personGroupId $schoolName, personId $pId, image path $imgPath
+
+# -- Training --
+#   for every value in $schools: (Banneker, JFK)
+#       store the school name in a var called schoolName
+#       train the dataset using the -train TerminalUtils action with personGroupId $schoolName
