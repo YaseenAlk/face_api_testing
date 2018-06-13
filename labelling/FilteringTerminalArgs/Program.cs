@@ -38,12 +38,12 @@ namespace Labelling
 
         static bool no_output = false;
 
-        // Usage: dotnet FilteringTerminalArgs <frame img dir> [-no_output (optional)]
+        // Usage: dotnet FilteringTerminalArgs.dll <frame img dir> [-no_output (optional)]
         static async Task Main(string[] args)
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Usage: dotnet FilteringTerminalArgs <frame img dir>");
+                Console.WriteLine("Usage: dotnet FilteringTerminalArgs.dll <frame img dir> [-no_output (optional)]");
                 return;
             }
 
