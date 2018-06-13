@@ -14,13 +14,18 @@ namespace GetFirstPersonIdFromName
 {
     class Program
     {
+        // TODO: make this program error-proof
         static readonly string subscriptionKey = ReadJsonStrFromFile("api_access_key.txt", "subscriptionKey");
         static readonly string uriBase = ReadJsonStrFromFile("api_access_key.txt", "uriBase");
 
-        static readonly string[] SUPPORTED_ACTIONS = {"-getId", "-createPerson"};
+        static readonly string[] SUPPORTED_ACTIONS = {"-getId", "-createPerson", "-uploadImages", "-train"};
+
+        static bool no_output = false;
 
         // Usage: dotnet TerminalUtils.dll -getId <personGroupId> <name>
         // Usage: dotnet TerminalUtils.dll -createPerson <personGroupId> <name> <user data (optional)>
+        // Usage: dotnet TerminalUtils.dll -uploadImages <personGroupId (must already exist)> <personId (must already exist)> <image path dir> [-no_output (optional)]
+        // Usage: dotnet TerminalUtils.dll -train <personGroupId>
         static async Task Main(string[] args)
         {
             if (args.Length < 1)
@@ -35,7 +40,7 @@ namespace GetFirstPersonIdFromName
             {
                 if (args.Length != 3)
                 {
-                    Console.WriteLine("Usage: dotnet GetFirstPersonIdFromName.dll <personGroupId> <name>");
+                    Console.WriteLine("Usage: dotnet TerminalUtils.dll -getId <personGroupId> <name>");
                     return;
                 }
                 string personGroupId = args[1];
@@ -58,11 +63,131 @@ namespace GetFirstPersonIdFromName
                 Console.WriteLine(returnedId);
                 return;
             }
+            else if (action == "-uploadimages")
+            {
+                if (args.Length < 4)
+                {
+                    Console.WriteLine("Usage: dotnet TerminalUtils.dll -uploadImages <personGroupId (must already exist)> <personId (must already exist)> <image path dir> [-no_output (optional)]");
+                    return;
+                }
+                if (Array.IndexOf(args, "-no_output") > -1)
+                {
+                    no_output = true;
+                }
+
+                string personGroupId = args[1];
+                string personId = args[2];
+                string path = args[3];
+                
+                if (!Directory.Exists(path))
+                {
+                    Console.WriteLine("Invalid image path.");
+                    return;
+                }
+
+                await DefineFacesForPersonsAsync(personGroupId, personId, path);
+                return;
+            }
+            else if (action == "-train")
+            {
+                if (args.Length != 2)
+                {
+                    Console.WriteLine("Usage: dotnet TerminalUtils.dll -train <personGroupId>");
+                    return;
+                }
+
+                string personGroupId = args[1];
+
+                bool startedTraining = await TrainPersonGroupAsync(personGroupId);
+                if (startedTraining)
+                {
+                    Console.WriteLine("Checking if training is completed... ");
+                    bool finishedTraining = await CheckTrainingAsync(personGroupId);
+                    while (!finishedTraining)
+                    {
+                        finishedTraining = await CheckTrainingAsync(personGroupId);
+                    }
+                    Console.WriteLine("Training complete!");
+                }
+            }
             else
             {
                 Console.WriteLine("That action is not currently supported.");
                 Console.WriteLine("Supported actions: " + String.Join(", ", SUPPORTED_ACTIONS));
                 return;
+            }
+        }
+
+        static async Task<bool> TrainPersonGroupAsync(string personGroupId)
+        {
+            string URI = uriBase + "persongroups/" + personGroupId + "/train";
+
+            byte[] empty = Encoding.UTF8.GetBytes("{}");
+
+            string trainRsp = await MakeRequestAsync("Training the " + personGroupId + " PersonGroup using the added images", URI, empty, "application/json", "POST");
+                
+            if (trainRsp == "")     //ideal response: empty string
+            {
+                return true;
+            }
+            else
+            {
+                Console.WriteLine("Training Request failed.");
+                Console.WriteLine("Response: " + trainRsp);
+                return false;
+            }
+        }
+
+        static async Task<bool> CheckTrainingAsync(string personGroupId)
+        {
+            string URI = uriBase + "persongroups/" + personGroupId + "/training";
+            
+            byte[] empty = Encoding.UTF8.GetBytes("{}");
+
+            string trainRsp = await MakeRequestAsync("Checking the status of the training", URI, empty, "application/json", "GET");
+                
+            JObject data = (JObject) JsonConvert.DeserializeObject(trainRsp);
+            string status = data["status"].Value<string>();
+            if (status != null && status != "")       //ideal response: a JSON string with a "status" field
+            {
+                Console.WriteLine(">        (training) status: " + status);
+                
+                return status == "succeeded";
+            }
+            else
+            {
+                Console.WriteLine(">    There seems to be a problem with requesting the training status of personGroupId '" + personGroupId + "'");
+                Console.WriteLine(">    Response: " + trainRsp);
+                return false;
+            }
+        }
+
+        static async Task DefineFacesForPersonsAsync(string personGroupId, string personId, string imagePath)
+        {
+            string[] dirs = Directory.GetFiles(imagePath, "*.bmp");
+            if (!no_output) Console.WriteLine("There are " + dirs.Length + " frames in this directory...");
+            foreach (string img in dirs)
+            {
+                await UploadImage(personGroupId, personId, img);
+            }
+        }
+
+        static async Task UploadImage(string personGroupId, string id, string path)
+        {
+            string URI = uriBase + "persongroups/" + personGroupId + "/persons/" + id + "/persistedFaces?";
+
+            string[] splitPath = path.Split("/");
+            string imgName = splitPath[splitPath.Length - 1];
+
+            byte[] img = GetImageAsByteArray(path);
+            string rsp = await MakeRequestAsync("Adding " + imgName + " to " + id, URI, img, "application/octet-stream", "POST");
+
+            JObject data = (JObject) JsonConvert.DeserializeObject(rsp);   //data should just be {"persistedFaceId": "..."}
+            string faceId = data["persistedFaceId"].Value<string>();
+            if (faceId == null || faceId == "")
+            {
+                if (!no_output) Console.WriteLine(">    There seems to be a problem with adding the img '" + imgName + "'");
+                if (!no_output) Console.WriteLine(">    Response: " + rsp);
             }
         }
 
@@ -148,6 +273,16 @@ namespace GetFirstPersonIdFromName
             string json = System.IO.File.ReadAllText(path);
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();
+        }
+
+        static byte[] GetImageAsByteArray(string imageFilePath)
+        {
+            using (FileStream fileStream =
+                new FileStream(imageFilePath, FileMode.Open, FileAccess.Read))
+            {
+                BinaryReader binaryReader = new BinaryReader(fileStream);
+                return binaryReader.ReadBytes((int)fileStream.Length);
+            }
         }
     }
 }
