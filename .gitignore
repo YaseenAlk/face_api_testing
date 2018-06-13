@@ -20,3 +20,9 @@ identification/SampleTraining/obj/
 identification/Identification/.vs/
 identification/Identification/bin/
 identification/Identification/obj/
+
+labelling/FilteringExecutable/bin/
+labelling/FilteringExecutable/obj/
+
+labelling/FilteringTerminalArgs/bin/
+labelling/FilteringTerminalArgs/obj/
