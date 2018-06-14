@@ -31,6 +31,9 @@
 # 2) personGroupIds must always be lowercase, so that means that you can't put it in a request URL unless its also lowercase
 # 3) This script assumes that each schoolName already has a personGroup created for it
 # 4) If you attempt to train a person group with no images in it, then the training will fail, and the program will stay in an infinite loop
+# 5) This script requires the following programs to be installed and aliased:
+#       ffmpeg as ffmpeg
+#       ffprobe as ffprobe
 
 
 #this is needed for the fileName for-loop

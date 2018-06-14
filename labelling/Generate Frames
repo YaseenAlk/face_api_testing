@@ -48,6 +48,11 @@
 #           echo Done with Session $s!
 #       Stay on standby until "done" is entered; if "exit" is entered, set continue to false
 
+# Note: this script requires the following programs to be installed and aliased:
+# ffmpeg as ffmpeg
+# ffprobe as ffprobe
+
+
 pathToAllVids="/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video"
 pathToFilterPrgm="/Users/$USER/Desktop/Filtering/"
 continue=true
