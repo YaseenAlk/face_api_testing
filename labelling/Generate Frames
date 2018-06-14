@@ -51,6 +51,7 @@
 # Note: this script requires the following programs to be installed and aliased:
 # ffmpeg as ffmpeg
 # ffprobe as ffprobe
+# c# as dotnet
 
 
 pathToAllVids="/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video"

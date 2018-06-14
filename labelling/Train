@@ -34,6 +34,7 @@
 # 5) This script requires the following programs to be installed and aliased:
 #       ffmpeg as ffmpeg
 #       ffprobe as ffprobe
+#       c# as dotnet
 
 
 #this is needed for the fileName for-loop
