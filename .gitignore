@@ -33,5 +33,10 @@ TerminalUtils/obj/
 labelling/FilteringExecutable/bin/
 labelling/FilteringExecutable/obj/
 
+labelling/FilteringTerminalArgs/.vs/
 labelling/FilteringTerminalArgs/bin/
 labelling/FilteringTerminalArgs/obj/
+
+unity/UnityFaceIDHelper/.vs/
+unity/UnityFaceIDHelper/bin/
+unity/UnityFaceIDHelper/obj/
