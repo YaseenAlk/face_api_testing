@@ -27,7 +27,7 @@ namespace Labelling
         const string LIBRARY_DATA_FILE = "library.txt"; // name of the file to save library-worthy frames into
         
         
-        const decimal MIN_YAW_DIFF = 0.5m; //units are in degrees, and range is [-90, 90]
+        const decimal MIN_YAW_DIFF = 10.0m; //units are in degrees, and range is [-90, 90]
         const int FRAMES_PER_YAW_VAL = 2; //number of frames to maintain for a small yaw value range dictated by MIN_YAW_DIFF
         static Dictionary<decimal, int> libraryCount;
 
