@@ -197,24 +197,34 @@ namespace Filtering
                 // response will be a list of faces:
                 // [{"faceId":"...", ..., "faceAttributes":{"headPose": {"roll": x, "yaw": y, "pitch": 0}}}, {"faceId":"...", ...}]
                 string rsp = await UploadImageGetFaceAndYawAsync(index);
-                JArray faces = (JArray) JsonConvert.DeserializeObject(rsp);
-                if (faces.Count > 0)
+                try 
                 {
-                    detectedFrames.Add(index, rsp);
-                    float yaw = (float) faces[0]["faceAttributes"]["headPose"]["yaw"];
-                    if (!no_output) Console.WriteLine("Yaw for frame" + index.ToString(INT_FORMAT) + ": " + yaw);
-                }
-                else
-                {
-                    //Console.WriteLine("frame" + index.ToString(INT_FORMAT) + " has no Faces in it");
-                    if (delete)
+                    JArray faces = (JArray) JsonConvert.DeserializeObject(rsp);
+                    if (faces.Count > 0)
                     {
-                        string path = dir + "frame" + index.ToString(INT_FORMAT) + FILE_EXTENSION;
-                        if (!no_output) Console.WriteLine("Deleting frame" + index.ToString(INT_FORMAT) + ".bmp because it does not have a detectable face");
-                        File.Delete(path);
+                        detectedFrames.Add(index, rsp);
+                        float yaw = (float) faces[0]["faceAttributes"]["headPose"]["yaw"];
+                        if (!no_output) Console.WriteLine("Yaw for frame" + index.ToString(INT_FORMAT) + ": " + yaw);
                     }
+                    else
+                    {
+                        //Console.WriteLine("frame" + index.ToString(INT_FORMAT) + " has no Faces in it");
+                        if (delete)
+                        {
+                            string path = dir + "frame" + index.ToString(INT_FORMAT) + FILE_EXTENSION;
+                            if (!no_output) Console.WriteLine("Deleting frame" + index.ToString(INT_FORMAT) + ".bmp because it does not have a detectable face");
+                            File.Delete(path);
+                        }
+                    }
+                    index ++;
+                } 
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error occurred when trying to filter face #" + index);
+                    Console.WriteLine("Exception: " + e.ToString());
+                    Console.WriteLine("HTTP Response: " + rsp);
                 }
-                index ++;
+                
             }
             if (!no_output) Console.WriteLine("Done filtering detectable faces!");
 
