@@ -120,7 +120,7 @@ namespace TerminalUtils
 
         static async Task<bool> TrainPersonGroupAsync(string personGroupId)
         {
-            string URI = uriBase + "persongroups/" + personGroupId + "/train";
+            string URI = uriBase + "largepersongroups/" + personGroupId + "/train";
 
             byte[] empty = Encoding.UTF8.GetBytes("{}");
 
@@ -140,7 +140,7 @@ namespace TerminalUtils
 
         static async Task<bool> CheckTrainingAsync(string personGroupId)
         {
-            string URI = uriBase + "persongroups/" + personGroupId + "/training";
+            string URI = uriBase + "largepersongroups/" + personGroupId + "/training";
             
             byte[] empty = Encoding.UTF8.GetBytes("{}");
 
@@ -174,7 +174,7 @@ namespace TerminalUtils
 
         static async Task UploadImage(string personGroupId, string id, string path)
         {
-            string URI = uriBase + "persongroups/" + personGroupId + "/persons/" + id + "/persistedFaces?";
+            string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + id + "/persistedFaces?";
 
             string[] splitPath = path.Split("/");
             string imgName = splitPath[splitPath.Length - 1];
@@ -191,10 +191,10 @@ namespace TerminalUtils
             }
         }
 
-        //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons
+        //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/largepersongroups/{personGroupId}/persons
         static async Task<string> CreatePersonAsync(string grp, string name, string data)
         {
-            string URI = uriBase + "persongroups/" + grp + "/persons";
+            string URI = uriBase + "largepersongroups/" + grp + "/persons";
             byte[] encoded = Encoding.UTF8.GetBytes("{'name': '" + name + "', 'userData': '" + data + "'}");
             string rsp = await MakeRequestAsync("Adding Person to Person Group", URI, encoded, "application/json", "POST");
             JObject returnedData = (JObject) JsonConvert.DeserializeObject(rsp);
@@ -202,10 +202,10 @@ namespace TerminalUtils
             return (id != null) ? id : "null";
         }
 
-        //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons
+        //Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/largepersongroups/{personGroupId}/persons
         static async Task<string> GetFirstIdFromNameAsync(string grp, string name)
         {
-            string URI = uriBase + "persongroups/" + grp + "/persons";
+            string URI = uriBase + "largepersongroups/" + grp + "/persons";
             byte[] empty = Encoding.UTF8.GetBytes("{}");
             string rsp = await MakeRequestAsync("List all Persons in PersonGroup", URI, empty, "application/json", "GET");
             JArray ppl = (JArray) JsonConvert.DeserializeObject(rsp);
