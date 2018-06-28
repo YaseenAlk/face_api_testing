@@ -148,7 +148,7 @@ namespace Identification
             //it might be beneficial to rewrite this such that the number of API calls is minimized 
             //(and the number of faces put into each call is maximized)
             string URI = uriBase + "identify";
-            string reqBody = "{\"personGroupId\": \"" + personGroupId + "\", \"faceIds\": [\"" + faceId + "\"]}";
+            string reqBody = "{\"largePersonGroupId\": \"" + personGroupId + "\", \"faceIds\": [\"" + faceId + "\"]}";
             byte[] req = Encoding.UTF8.GetBytes(reqBody);
 
             string rsp = await MakeRequestAsync("Identify person using faceId", URI, req, "application/json", "POST");
@@ -158,7 +158,7 @@ namespace Identification
         // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/persongroups/{personGroupId}/persons/{personId}
         static async Task<string> IdToNameAsync(string id)
         {
-            string URI = uriBase + "persongroups/" + personGroupId + "/persons/" + id;
+            string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + id;
             byte[] empty = Encoding.UTF8.GetBytes("{}");
 
             string rsp = await MakeRequestAsync("Retrieve Person associated with ID", URI, empty, "application/json", "GET");
