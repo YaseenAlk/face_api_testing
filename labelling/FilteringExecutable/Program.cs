@@ -36,6 +36,12 @@ namespace Filtering
 
         static async Task Main(string[] args)
         {
+            if (subscriptionKey == "" || uriBase == "")
+            {
+                Console.WriteLine("Please make sure that api_access_key.txt is in the correct location.");
+                return;
+            }
+
             InitializeInstanceData();
             Console.Write("Enter the directory containing the frame images: ");
             dir = Console.ReadLine();
@@ -414,6 +420,11 @@ namespace Filtering
 
         static string ReadJsonStrFromFile(string path, string param)
         {
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("Unable to find file in path: " + path);
+                return "";
+            }
             string json = System.IO.File.ReadAllText(path);
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();

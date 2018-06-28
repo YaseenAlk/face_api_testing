@@ -28,6 +28,12 @@ namespace TerminalUtils
         // Usage: dotnet TerminalUtils.dll -train <personGroupId>
         static async Task Main(string[] args)
         {
+            if (subscriptionKey == "" || uriBase == "")
+            {
+                Console.WriteLine("Please make sure that api_access_key.txt is in the correct location.");
+                return;
+            }
+
             if (args.Length < 1)
             {
                 Console.WriteLine("Usage: dotnet TerminalUtils.dll [action] [supporting args]");
@@ -270,6 +276,11 @@ namespace TerminalUtils
 
         static string ReadJsonStrFromFile(string path, string param)
         {
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("Unable to find file in path: " + path);
+                return "";
+            }
             string json = System.IO.File.ReadAllText(path);
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();

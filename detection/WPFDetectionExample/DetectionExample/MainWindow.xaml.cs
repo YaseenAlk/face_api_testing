@@ -36,9 +36,10 @@ namespace DetectionExample
         //
         // NOTE: Free trial subscription keys are generated in the westcentralus region, so if you are using
         // a free trial subscription key, you should not need to change this region.
+        private readonly static string subscriptionKey = ReadJsonStrFromFile(@"C:\Users\Yaseen Alkhafaji\Documents\GitHub\face_api_testing\api_access_key.txt", "subscriptionKey");
+        private readonly static string uriBase = ReadJsonStrFromFile(@"C:\Users\Yaseen Alkhafaji\Documents\GitHub\face_api_testing\api_access_key.txt", "uriBase");
         private readonly IFaceServiceClient faceServiceClient =
-            new FaceServiceClient(ReadJsonStrFromFile(@"C:\Users\Yaseen Alkhafaji\Documents\GitHub\face_api_testing\api_access_key.txt", "subscriptionKey"), 
-            ReadJsonStrFromFile(@"C:\Users\Yaseen Alkhafaji\Documents\GitHub\face_api_testing\api_access_key.txt", "uriBase"));
+            new FaceServiceClient(subscriptionKey, uriBase);
 
         Face[] faces;                   // The list of detected faces.
         String[] faceDescriptions;      // The list of descriptions for the detected faces.
@@ -46,6 +47,12 @@ namespace DetectionExample
 
         public MainWindow()
         {
+            if (subscriptionKey == "" || uriBase == "")
+            {
+                Console.WriteLine("Please make sure that api_access_key.txt is in the correct location.");
+                return;
+            }
+
             InitializeComponent();
         }
 
@@ -260,6 +267,11 @@ namespace DetectionExample
 
         private static string ReadJsonStrFromFile(string path, string param)
         {
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("Unable to find file in path: " + path);
+                return "";
+            }
             string json = System.IO.File.ReadAllText(path);
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();

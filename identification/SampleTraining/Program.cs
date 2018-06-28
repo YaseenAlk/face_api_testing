@@ -39,6 +39,12 @@ namespace SampleTraining
 
         static async Task Main()
         {
+            if (subscriptionKey == "" || uriBase == "")
+            {
+                Console.WriteLine("Please make sure that api_access_key.txt is in the correct location.");
+                return;
+            }
+
             if (make_new_grp) Console.WriteLine("First, I need to create the PersonGroup. (only needs to be done the first time)");
             bool created_grp = await CreatePersonGroupAsync(make_new_grp);
             if (created_grp) Console.WriteLine("Then, I need to define the Persons in the PersonGroup. (only needs to be done the first time)");
@@ -475,6 +481,11 @@ namespace SampleTraining
 
         static string ReadJsonStrFromFile(string path, string param)
         {
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("Unable to find file in path: " + path);
+                return "";
+            }
             string json = System.IO.File.ReadAllText(path);
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();

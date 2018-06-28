@@ -14,9 +14,9 @@ namespace Identification
 {
     static class Program
     {
-        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
+        static readonly string subscriptionKey = ReadJsonStrFromFile("api_access_key.txt", "subscriptionKey");
 
-        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
+        static readonly string uriBase = ReadJsonStrFromFile("api_access_key.txt", "uriBase");
 
         static string personGroupId;
         
@@ -32,6 +32,12 @@ namespace Identification
 
         static async Task Main()
         {
+            if (subscriptionKey == "" || uriBase == "")
+            {
+                Console.WriteLine("Please make sure that api_access_key.txt is in the correct location.");
+                return;
+            }
+
             Console.WriteLine("Now that training is complete, the PersonGroup is ready to start identifying!");
             Console.Write("Enter the personGroupId that we are comparing with: ");
             personGroupId = Console.ReadLine();
@@ -306,6 +312,11 @@ namespace Identification
 
         static string ReadJsonStrFromFile(string path, string param)
         {
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("Unable to find file in path: " + path);
+                return "";
+            }
             string json = System.IO.File.ReadAllText(path);
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();
