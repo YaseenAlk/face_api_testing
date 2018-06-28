@@ -44,6 +44,12 @@ labelling/FilteringTerminalArgs/bin/
 labelling/FilteringTerminalArgs/obj/
 labelling/FilteringTerminalArgs/FilteringTerminalArgs.sln
 
+labelling/IdentifyUnknownVideo/.vs/
+labelling/IdentifyUnknownVideo/bin/
+labelling/IdentifyUnknownVideo/obj/
+labelling/IdentifyUnknownVideo/IdentifyUnknownVideo.sln
+
+
 unity/UnityFaceIDHelper/.vs/
 unity/UnityFaceIDHelper/bin/
 unity/UnityFaceIDHelper/obj/
