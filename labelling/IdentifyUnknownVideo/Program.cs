@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -23,11 +24,15 @@ namespace IdentifyUnknownVideo
 
         static bool del_after_processing = false;
 
+        static Dictionary<string, Dictionary<string, decimal>> frameResults = new Dictionary<string, Dictionary<string, decimal>>();
+
         // dictionary: each key is a candidate's personId and each Value is a list of confidence vals
         static Dictionary<string, List<decimal>> averagedGuesses = new Dictionary<string, List<decimal>>();
 
         // key is their unique microsoft-assigned personID; value is the name associated with the personID
         static Dictionary<string, string> candidateNames = new Dictionary<string, string>();
+
+        static long timedDuration = 0;
 
         // Functionality:
         // Given: personGroupId, frameFolderPath, outputPath (assuming that all three already exist and are pre-processed)
@@ -35,12 +40,12 @@ namespace IdentifyUnknownVideo
         // (and delete the frame file if del_after_processing is true)
         // Also output a file called averaged.txt that has the averaged confidence levels from every frame
 
-        // Usage: dotnet IdentifyUnknownVideo.dll <personGroupId> <frame folder path> <output path for guess folder> [-del_after_processing (optional)]
+        // Usage: dotnet IdentifyUnknownVideo.dll <personGroupId> <frame folder path> <output path for guess folder> <time taken so far (ms)> [-del_after_processing (optional)]
         static async Task Main(string[] args)
         {
-            if (args.Length < 3)
+            if (args.Length < 4)
             {
-                Console.WriteLine("Usage: dotnet IdentifyUnknownVideo.dll <personGroupId> <frame folder path> <output path for guess folder> [-del_after_processing (optional)]");
+                Console.WriteLine("Usage: dotnet IdentifyUnknownVideo.dll <personGroupId> <frame folder path> <output path for guess folder> <time taken so far (ms)> [-del_after_processing (optional)]");
                 return;
             }
 
@@ -49,6 +54,8 @@ namespace IdentifyUnknownVideo
                 Console.WriteLine("Please make sure that api_access_key.txt is in the correct location.");
                 return;
             }
+
+            var watch = System.Diagnostics.Stopwatch.StartNew(); // start timing
 
             if (Array.IndexOf(args, "-del_after_processing") > -1)
             {
@@ -59,6 +66,7 @@ namespace IdentifyUnknownVideo
             personGroupId = args[0].ToLower();  //force lowercase, just in case!
             frameFolderPath = args[1];
             outputPath = args[2];
+            timedDuration += Int32.Parse(args[3]);
             
             if (!frameFolderPath.EndsWith("/")) frameFolderPath += "/";
             if (!outputPath.EndsWith("/")) outputPath += "/";
@@ -87,12 +95,28 @@ namespace IdentifyUnknownVideo
 
                     Dictionary<string, decimal> candidatesForFrame = await IdentifyAsync(biggestDetectedFaceId);
                     await AddNamesToNameDictAsync(candidatesForFrame);
-                    ExportFrameGuesses(frame, candidatesForFrame);
-                    AddFrameGuessesToAverage(candidatesForFrame);
+                    string frameName = Path.GetFileName(frame).Split('.')[0];
+                    frameResults.Add(frameName, candidatesForFrame);
                 }
             }
 
-            SaveAverageGuesses();
+            foreach (KeyValuePair<string, Dictionary<string, decimal>> frameRes in frameResults)
+            {
+                AddFrameResultToAverage(frameRes.Value);
+            }
+
+            watch.Stop();   //stop timing
+            var elapsed = watch.ElapsedMilliseconds;
+            timedDuration += elapsed;
+
+            Console.WriteLine("Generating Json...");
+
+            watch.Reset();
+            watch.Start();
+            GenerateJSONFile();
+            watch.Stop();
+
+            Console.WriteLine("Generated Json file in " + watch.ElapsedMilliseconds + "ms");
         }
 
         // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/detect[?returnFaceId][&returnFaceLandmarks][&returnFaceAttributes]
@@ -133,15 +157,6 @@ namespace IdentifyUnknownVideo
             return cands;
         }
 
-        static async Task AddNamesToNameDictAsync(Dictionary<string, decimal> cands)
-        {
-            foreach (KeyValuePair<string, decimal> entry in cands)
-            {
-                if (!candidateNames.ContainsKey(entry.Key))
-                    candidateNames.Add(entry.Key, await IdToNameAsync(entry.Key));
-            }
-        }
-
         static void ExportFrameGuesses(string framePath, Dictionary<string, decimal> cands)
         {
             string frameName = Path.GetFileName(framePath).Split('.')[0];
@@ -164,7 +179,7 @@ namespace IdentifyUnknownVideo
             System.IO.File.WriteAllLines(savePath, dataToSave);
         }
 
-        static void AddFrameGuessesToAverage(Dictionary<string, decimal> cands)
+        static void AddFrameResultToAverage(Dictionary<string, decimal> cands)
         {
             foreach (KeyValuePair<string, decimal> entry in cands)
             {
@@ -185,7 +200,6 @@ namespace IdentifyUnknownVideo
 
         static void SaveAverageGuesses()
         {
-            Console.WriteLine("Saving average guesses...");
             string savePath = outputPath + "averaged.txt";
 
             List<string> dataToSave = new List<string>();
@@ -389,5 +403,233 @@ namespace IdentifyUnknownVideo
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();
         }
+
+        // in the form of [name, # frames with this guess, weighted confidence]
+        // note: "name" here is the microsoft-assigned personID (guaranteed unique),
+        // NOT the PRG id (likely unique but not guaranteed for every experiment)
+        static Tuple<string, int, decimal>[] GenerateOverallCandidates()
+        {
+            List<Tuple<string, int, decimal>> overallCands = new List<Tuple<string, int, decimal>>();
+
+            foreach (KeyValuePair<string, List<decimal>> candidate in averagedGuesses)
+            {
+                List<decimal> confidences = candidate.Value;
+
+                string name = candidate.Key;
+                int count = confidences.Count;
+                // Using the formula that Hae Won gave me:
+                // pid_confidence = {(sum of all pid confidence)/(# of pid frames)} * {(# of pid frames)/(total# of frames)}
+                decimal weightedVal = confidences.Sum() / count * count / frameResults.Count;
+
+                Tuple<string, int, decimal> overall = new Tuple<string, int, decimal>(name, count, weightedVal);
+                overallCands.Add(overall);
+            }
+
+            return overallCands.ToArray();
+        }
+
+        static string FinalRecommendation(Tuple<string, int, decimal>[] overallCands)
+        {
+            decimal largestConfidence = 0;
+            int largestIndex = -1;
+
+            for (int i = 0; i < overallCands.Length; i++)
+            {
+                Tuple<string, int, decimal> candidate = overallCands[i];
+                decimal conf = candidate.Item3;
+                if (conf >= largestConfidence)
+                {
+                    largestConfidence = conf;
+                    largestIndex = i;
+                }
+            }
+
+            if (largestIndex == -1) //empty list..?
+                return "";
+            else
+                return overallCands[largestIndex].Item1;
+        }
+
+        // converts a string from the Microsoft-assigned ID to the PRG-assigned ID
+
+        // unfortunately, the JSON output of the program doesn't currently 
+        // support a way for 2 LargePersonGroup Persons to share a name 
+        // (because JsonConvert.ToString uses instance data names to convert to JSON)
+        static string MicrosoftIDToPRGID(string mID)
+        {
+            return candidateNames[mID];
+        }
+
+        static async Task AddNamesToNameDictAsync(Dictionary<string, decimal> cands)
+        {
+            foreach (KeyValuePair<string, decimal> entry in cands)
+            {
+                if (!candidateNames.ContainsKey(entry.Key))
+                    candidateNames.Add(entry.Key, await IdToNameAsync(entry.Key));
+            }
+        }
+
+        //convert from Microsoft ID to PRG ID
+        static Object[][] OverallCandidatesDisplay(Tuple<string, int, decimal>[] overallCands)
+        {
+            List<Object[]> renamed = new List<Object[]>();
+
+            foreach (Tuple<string, int, decimal> cand in overallCands)
+            {
+                string newName = MicrosoftIDToPRGID(cand.Item1);
+                Object[] newTuple = { newName, cand.Item2, cand.Item3 };
+                renamed.Add(newTuple);
+            }
+
+            return renamed.ToArray();
+        }
+
+        // converts from Microsoft ID to PRG ID
+        static Dictionary<string, decimal> GuessesDisplay(Dictionary<string, decimal> confidences)
+        {
+            Dictionary<string, decimal> converted = new Dictionary<string, decimal>();
+
+            foreach (KeyValuePair<string, decimal> entry in confidences)
+            {
+                string newName = MicrosoftIDToPRGID(entry.Key);
+                converted.Add(newName, entry.Value);
+            }
+
+            return converted;
+        }
+
+        // Everything below is json output code!
+        // DynamicObject code for RootJsonObj and FrameObj are adapted from https://stackoverflow.com/a/37997635/4036588
+
+        static void GenerateJSONFile()
+        {
+            RootJsonObj jsonObj = new RootJsonObj();
+
+            Dictionary<string, FrameObj> frameObjs = GenerateFrameObjs();
+            jsonObj.FrameObjects = frameObjs;
+
+            ResultObj resultObj = new ResultObj();
+            resultObj.ValidFrames = frameResults.Count;
+            Tuple<string, int, decimal>[] overallCandidates = GenerateOverallCandidates();
+            resultObj.Candidates = OverallCandidatesDisplay(overallCandidates);
+            string finalRec = FinalRecommendation(overallCandidates);
+            if (finalRec == "")
+                resultObj.FinalRec = "none";
+            else
+                resultObj.FinalRec = MicrosoftIDToPRGID(FinalRecommendation(overallCandidates));
+            jsonObj.Result = resultObj;
+
+            jsonObj.TimeTaken = timedDuration;
+
+            string savePath = outputPath + "guesses.json";
+
+            JsonSerializer serializer = new JsonSerializer();
+            serializer.Formatting = Formatting.Indented;
+            serializer.NullValueHandling = NullValueHandling.Ignore;
+
+            using (StreamWriter sw = new StreamWriter(savePath))
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                serializer.Serialize(writer, jsonObj);
+            }
+        }
+
+        static Dictionary<string, FrameObj> GenerateFrameObjs()
+        {
+            Dictionary<string, FrameObj> objs = new Dictionary<string, FrameObj>();
+            foreach (KeyValuePair<string, Dictionary<string, decimal>> entry in frameResults)
+            {
+                FrameObj frame = new FrameObj(entry.Key);
+                frame.Confidences = GuessesDisplay(entry.Value);
+                objs.Add(frame.GetFrameName(), frame);
+            }
+            return objs;
+        }
+
+        class RootJsonObj : DynamicObject
+        {
+            public Dictionary<string, FrameObj> FrameObjects { get; set; }
+            [JsonProperty(PropertyName = "result")]
+            public ResultObj Result { get; set; }
+            [JsonProperty(PropertyName = "time_taken_ms")]
+            public long TimeTaken { get; set; }
+
+            public override IEnumerable<string> GetDynamicMemberNames()
+            {
+                foreach (KeyValuePair<string, FrameObj> entry in FrameObjects)
+                {
+                    yield return entry.Key;
+                }
+
+                foreach (var prop in GetType().GetProperties().Where(p => p.CanRead && p.GetIndexParameters().Length == 0 && p.Name != nameof(FrameObjects)))
+                {
+                    yield return prop.Name;
+                }
+            }
+
+            public override bool TryGetMember(GetMemberBinder binder, out object result)
+            {
+                if (FrameObjects.ContainsKey(binder.Name))
+                {
+                    result = FrameObjects[binder.Name];
+                    return true;
+                }
+
+                return base.TryGetMember(binder, out result);
+            }
+        }
+
+        class ResultObj
+        {
+            [JsonProperty(PropertyName = "valid_frames")]
+            public int ValidFrames { get; set; }
+            [JsonProperty(PropertyName = "candidates")]
+            public Object[][] Candidates { get; set; }
+            [JsonProperty(PropertyName = "final_recommendation")]
+            public string FinalRec { get; set; }
+        }
+
+        class FrameObj : DynamicObject
+        {
+            private string _name;
+
+            public FrameObj(string name)
+            {
+                if (name == null)
+                    throw new ArgumentNullException(nameof(name));
+
+                _name = name;
+            }
+
+            public string GetFrameName()
+            {
+                return _name;
+            }
+
+            public Dictionary<string, decimal> Confidences { get; set; }
+
+            public override IEnumerable<string> GetDynamicMemberNames()
+            {
+                foreach (KeyValuePair<string, decimal> entry in Confidences)
+                {
+                    yield return entry.Key;
+                }
+            }
+
+            public override bool TryGetMember(GetMemberBinder binder, out object result)
+            {
+                if (Confidences.ContainsKey(binder.Name))
+                {
+                    result = Confidences[binder.Name];
+                    return true;
+                }
+                else
+                {
+                    result = null;
+                    return false;
+                }
+            }
+        }
+
     }
 }
