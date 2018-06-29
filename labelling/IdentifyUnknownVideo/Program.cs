@@ -24,7 +24,7 @@ namespace IdentifyUnknownVideo
 
         static bool del_after_processing = false;
 
-        static Dictionary<string, Dictionary<string, decimal>> frameResults = new Dictionary<string, Dictionary<string, decimal>>();
+        static SortedDictionary<string, Dictionary<string, decimal>> frameResults = new SortedDictionary<string, Dictionary<string, decimal>>();
 
         // dictionary: each key is a candidate's personId and each Value is a list of confidence vals
         static Dictionary<string, List<decimal>> averagedGuesses = new Dictionary<string, List<decimal>>();
@@ -33,6 +33,8 @@ namespace IdentifyUnknownVideo
         static Dictionary<string, string> candidateNames = new Dictionary<string, string>();
 
         static long timedDuration = 0;
+
+        const bool QUEUE_10_AT_ONCE = true;
 
         // Functionality:
         // Given: personGroupId, frameFolderPath, outputPath (assuming that all three already exist and are pre-processed)
@@ -72,31 +74,84 @@ namespace IdentifyUnknownVideo
             if (!outputPath.EndsWith("/")) outputPath += "/";
 
             string[] frameDirs = Directory.GetFiles(frameFolderPath, "*" + FILE_EXTENSION);
-            foreach (string frame in frameDirs)
+            Dictionary<string, string> faceIdToFileName = new Dictionary<string, string>();
+
+            if (QUEUE_10_AT_ONCE)
             {
-                string biggestDetectedFaceId;   //for now, just take the biggest face detected in the frame
+                int count = frameDirs.Length;
+                List<string> frameQueue = new List<string>();
+                while (count > 0)
+                {
+                    string frame = frameDirs[count - 1];
 
-                try
-                {
-                    biggestDetectedFaceId = await DetectBiggestFaceAsync(frame);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("\n" + e.Message);
-                    biggestDetectedFaceId = null;
-                }
+                    string biggestDetectedFaceId;
 
-                if (biggestDetectedFaceId != null)  //if there's a face in this frame
-                {
-                    if (del_after_processing)
+                    try
                     {
-                        File.Delete(frame);
+                        biggestDetectedFaceId = await DetectBiggestFaceAsync(frame);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("\n" + e.Message);
+                        biggestDetectedFaceId = null;
                     }
 
-                    Dictionary<string, decimal> candidatesForFrame = await IdentifyAsync(biggestDetectedFaceId);
-                    await AddNamesToNameDictAsync(candidatesForFrame);
-                    string frameName = Path.GetFileName(frame).Split('.')[0];
-                    frameResults.Add(frameName, candidatesForFrame);
+                    count--;
+
+                    if (biggestDetectedFaceId != null)
+                    {
+                        if (del_after_processing)
+                        {
+                            File.Delete(frame);
+                        }
+
+                        frameQueue.Add(biggestDetectedFaceId);
+                        string frameName = Path.GetFileName(frame).Split('.')[0];
+                        faceIdToFileName.Add(biggestDetectedFaceId, frameName);
+                    }
+
+                    if (frameQueue.Count == 10 || count == 0)
+                    {
+                        Dictionary<string, Dictionary<string, decimal>> identified = await IdentifyMultipleFaceAsync(frameQueue.ToArray());
+
+                        foreach (KeyValuePair<string, Dictionary<string, decimal>> entry in identified)
+                        {
+                            await AddNamesToNameDictAsync(entry.Value);
+                            frameResults.Add(faceIdToFileName[entry.Key], entry.Value);
+                        }
+
+                        frameQueue = new List<string>();
+                    }
+                }
+            }
+            else
+            {
+                foreach (string frame in frameDirs)
+                {
+                    string biggestDetectedFaceId;   //for now, just take the biggest face detected in the frame
+
+                    try
+                    {
+                        biggestDetectedFaceId = await DetectBiggestFaceAsync(frame);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("\n" + e.Message);
+                        biggestDetectedFaceId = null;
+                    }
+
+                    if (biggestDetectedFaceId != null)  //if there's a face in this frame
+                    {
+                        if (del_after_processing)
+                        {
+                            File.Delete(frame);
+                        }
+
+                        Dictionary<string, decimal> candidatesForFrame = await IdentifySingleFaceAsync(biggestDetectedFaceId);
+                        await AddNamesToNameDictAsync(candidatesForFrame);
+                        string frameName = Path.GetFileName(frame).Split('.')[0];
+                        frameResults.Add(frameName, candidatesForFrame);
+                    }
                 }
             }
 
@@ -137,11 +192,36 @@ namespace IdentifyUnknownVideo
             return detectedIds[0];
         }
 
-        static async Task<Dictionary<string, decimal>> IdentifyAsync(string faceID)
+        static async Task<Dictionary<string, Dictionary<string, decimal>>> IdentifyMultipleFaceAsync(string[] faceIds)
+        {
+            string rsp = await IdentifyFacesAsync(faceIds);
+            JArray faces = (JArray)JsonConvert.DeserializeObject(rsp);
+
+            //data should be {[{"faceId":"...", "candidates": [{"personId":"...", "confidence": #.##}, {"personId":"...", "confidence": #.##}] }]}
+
+            Dictionary<string, Dictionary<string, decimal>> idsAndCandidates = new Dictionary<string, Dictionary<string, decimal>>();
+            foreach (JObject faceAndCandidates in faces)
+            {
+                Dictionary<string, decimal> cands = new Dictionary<string, decimal>();
+
+                JArray candidates = (JArray) faceAndCandidates["candidates"];
+                foreach (JObject c in candidates)
+                {
+                    cands.Add(c["personId"].Value<string>(), c["confidence"].Value<decimal>());
+                }
+                idsAndCandidates.Add(faceAndCandidates["faceId"].Value<string>(), cands);
+            }
+            return idsAndCandidates;
+        }
+
+        static async Task<Dictionary<string, decimal>> IdentifySingleFaceAsync(string faceID)
         {
             Dictionary<string, decimal> cands = new Dictionary<string, decimal>();
-            
-            string rsp = await IdentifyFaceAsync(faceID);
+
+            List<string> faceList = new List<string>();
+            faceList.Add(faceID);
+
+            string rsp = await IdentifyFacesAsync(faceList.ToArray());
             JArray data = (JArray) JsonConvert.DeserializeObject(rsp);
 
             //data should be {[{"faceId":"...", "candidates": [{"personId":"...", "confidence": #.##}, {"personId":"...", "confidence": #.##}] }]}
@@ -151,32 +231,10 @@ namespace IdentifyUnknownVideo
             JArray candidates = (JArray) faceAndCandidates["candidates"];
             foreach (JObject c in candidates)
             {
-                cands.Add(c["personId"].Value<string>(), (decimal) c["confidence"].Value<float>());
+                cands.Add(c["personId"].Value<string>(), c["confidence"].Value<decimal>());
             }
 
             return cands;
-        }
-
-        static void ExportFrameGuesses(string framePath, Dictionary<string, decimal> cands)
-        {
-            string frameName = Path.GetFileName(framePath).Split('.')[0];
-            string savePath = outputPath + frameName + ".txt";
-
-            List<string> dataToSave = new List<string>();
-            dataToSave.Add("{");
-            for (int i = 0; i < cands.Keys.Count; i++)
-            {
-                string personID = cands.Keys.ElementAt(i);
-                string name = candidateNames[personID];
-
-                if ((i+1) < cands.Keys.Count)
-                    dataToSave.Add("\t\"" + name + "\": " + cands[personID] + ",");
-                else
-                    dataToSave.Add("\t\"" + name + "\": " + cands[personID]); // last one doesn't have a comma! :P
-            }
-            dataToSave.Add("}");
-
-            System.IO.File.WriteAllLines(savePath, dataToSave);
         }
 
         static void AddFrameResultToAverage(Dictionary<string, decimal> cands)
@@ -198,45 +256,15 @@ namespace IdentifyUnknownVideo
             }
         }
 
-        static void SaveAverageGuesses()
-        {
-            string savePath = outputPath + "averaged.txt";
-
-            List<string> dataToSave = new List<string>();
-            dataToSave.Add("{");
-            for (int i = 0; i < averagedGuesses.Keys.Count; i++)
-            {
-                string personID = averagedGuesses.Keys.ElementAt(i);
-                string name = candidateNames[personID];
-                List<decimal> confidences = averagedGuesses[personID];
-                
-                decimal total = 0;
-                foreach (decimal d in confidences)
-                    total += d;
-                
-                int count = confidences.Count;
-
-                decimal avg = total/count;
-
-                if ((i+1) < averagedGuesses.Keys.Count)
-                    dataToSave.Add("\t\"" + name + "\": \"" + avg + " (from " + count + " frames)" + "\",");
-                else
-                    dataToSave.Add("\t\"" + name + "\": \"" + avg + " (from " + count + " frames)" + "\""); // last one doesn't have a comma! :P
-            }
-            dataToSave.Add("}");
-
-            System.IO.File.WriteAllLines(savePath, dataToSave);
-        }
-
         // Goal: https://[location].api.cognitive.microsoft.com/face/v1.0/identify
-        static async Task<string> IdentifyFaceAsync(string faceId)
+        static async Task<string> IdentifyFacesAsync(string[] faceIds)
         {
             //TODO: the API is capable of handling 10 independent faces in one call of "Face - Identify"
             //currently, I am putting one face per call because it guarantees that every call will have <10 faces
             //it might be beneficial to rewrite this such that the number of API calls is minimized 
             //(and the number of faces put into each call is maximized)
             string URI = uriBase + "identify";
-            string reqBody = "{\"largePersonGroupId\": \"" + personGroupId + "\", \"faceIds\": [\"" + faceId + "\"]}";
+            string reqBody = "{\"largePersonGroupId\": \"" + personGroupId + "\", \"faceIds\": [\"" + String.Join("\",\"", faceIds) + "\"]}";
             byte[] req = Encoding.UTF8.GetBytes(reqBody);
 
             string rsp = await MakeRequestAsync("Identify person using faceId", URI, req, "application/json", "POST");
