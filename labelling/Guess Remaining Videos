@@ -1,0 +1,149 @@
+#!/bin/bash
+
+#   Pseudocode:
+#
+#   Define variables pathToGuesses (root folder to put video guesses into),
+#       pathToAllVids (.../NIH2018_Data/Video), 
+#       pathToFilteringPrgm (folder with published FilteringTerminalArgs proj),
+#       pathToIdentifyingPrgm (folder with published IdentifyUnknownVideo proj)
+#
+#   Make an array called schools with values Banneker and JFK
+#
+#   Make a folder in $pathToGuesses if it doesn't exist
+#   Make a folder in $pathToGuesses/Banneker if it doesn't exist
+#   Make a folder in $pathToGuesses/JFK if it doesn't exist
+#
+#   for every value in $schools: (Banneker, JFK)
+#       store the school name in a var called schoolName
+#       set schoolName to all lowercase (personGroupIds can only be lowercase)
+#       go to "$pathToAllVids"/unlabelled_$schoolName
+#       for every .MP4 file in the directory:
+#           store the file name in a var called $fileName
+#
+#           echo --- Starting Video: $fileName ---
+#           make a folder in "$pathToGuesses"/$schoolName/$fileName
+#
+#           if there is no "guesses.json" file and no "useful.txt" file in "$pathToGuesses"/$schoolName/$fileName:
+#               re-generate ffmpeg frames:
+#                   calculate video duration using ffprobe and store it in a var called duration
+#                   create variables called startTime and durationTime
+#                   if duration is greater than 7 minutes
+#                       set startTime to 2min and durationTime to 5min
+#                   else if duration is greater than 5 minutes
+#                       set startTime to (duration minus 5 minutes)/2, and set durationTime to 5 min
+#                   else
+#                   set startTime to 0
+#                   set durationTime to duration
+#
+#                   use ffmpeg to generate frames, starting at startTime and lasting durationTime, cutting the height and width in half, at 3 fps, using the name "frame%05d.bmp" and stored in "$pathToGuesses"/$schoolName/$fileName
+#
+#               if there is no "useful.txt" in "$pathToGuesses"/$schoolName/$fileName:
+#                   run the filtering program as normal:
+#                       cd to "$pathToFilteringPrgm"
+#                       run FilteringTerminalArgs.dll in "$pathToGuesses"/$schoolName/$fileName with -no_output and -just_filter_detectables
+#                       echo Just generated & filtered frames for $fileName!
+#               else
+#                   run the filtering program using the existing useful.txt to quickly filter:
+#
+#               cd to "$pathToIdentifyingPrgm"
+#               run IdentifyUnknownVideo.dll with $schoolName in "$pathToGuesses"/$schoolName/$fileName, output to "$pathToGuesses"/$schoolName/$fileName
+#               echo Done guessing for $fileName!
+#           else
+#               echo Skipping "$pathToGuesses"/$schoolName/$fileName!
+
+# Notes:
+# 1) This script skips any videos that have already been processed, so you can run it over and over again without worrying about old data being tampered with.
+# 2) You cannot use Face - Identify on a personGroup or largePersonGroup if it hasn't been trained! (https://westus.dev.cognitive.microsoft.com/docs/services/563879b61984550e40cbbe8d/operations/563879b61984550f30395239)
+# 3) Every time you want to run FilteringTerminalArgs, you need to cd to $pathToFilteringPrgm (same w/ IdentifyUnknownVideo and $pathToIdentifyingPrgm)
+# 4) personGroupIds must always be lowercase, so that means that you can't put it in a request URL unless its also lowercase
+# 5) This script assumes that each schoolName already has a personGroup created for it
+# 6) This script requires the following programs to be installed and aliased:
+#       ffmpeg as ffmpeg
+#       ffprobe as ffprobe
+#       c# as dotnet
+#       GNU's date as gdate (this is part of coreutils and can be installed in homebrew using 'brew install coreutils')
+
+#this is needed for the fileName for-loop
+shopt -s nullglob
+
+pathToGuesses="/Volumes/My Passport/UnknownVidGuesses"
+pathToAllVids="/Volumes/My Passport/Dropbox (MIT)/NIH2018_Data/Video"
+pathToFilteringPrgm="/Users/$USER/Desktop/Yaseen script files/Filtering"
+pathToIdentifyingPrgm="/Users/$USER/Desktop/Yaseen script files/Identifying"
+
+mkdir -p "$pathToGuesses"
+
+declare -a schools=("Banneker" "JFK")
+
+for schoolName in "${schools[@]}"
+do
+    mkdir -p "$pathToGuesses"/$schoolName
+    schoolName=$(echo "$schoolName" | tr '[:upper:]' '[:lower:]')
+    cd "$pathToAllVids"/unlabelled_$schoolName
+
+    for fileName in *.mp4 *.MP4; do
+        echo --- Starting Video: $fileName ---
+        mkdir -p "$pathToGuesses"/$schoolName/$fileName
+        
+        if ls "$pathToGuesses"/$schoolName/$fileName/guesses.json &>/dev/null && ls "$pathToGuesses"/$schoolName/$fileName/useful.txt &>/dev/null
+        then
+            echo Skipping "$pathToGuesses"/$schoolName/$fileName!
+        else
+            duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$pathToAllVids/unlabelled_$schoolName/$fileName")
+
+            startTime=0
+            durationTime=0
+            if (( $(echo "$duration > 420.0" | bc -l) )); then
+                startTime=120.0
+                durationTime=300.0
+            elif (( $(echo "$duration > 300.0" | bc -l) )); then
+                startTime=$(echo "($duration - 300.0)/2" | bc -l)
+                durationTime=300.0
+            else
+                startTime=0
+                durationTime=$duration
+            fi
+
+            echo Extracting frames...
+            ffmpeg -ss $startTime -i "$pathToAllVids/unlabelled_$schoolName/$fileName" -t $durationTime -vf fps=3,scale=iw/2:ih/2 "$pathToGuesses/$schoolName/$fileName/frame%05d.bmp" -hide_banner &> /dev/null
+            echo Done extracting frames!
+
+            echo Filtering...
+
+            start=0
+            stop=0
+            dur=0
+
+            if ls "$pathToGuesses"/$schoolName/$fileName/useful.txt &>/dev/null
+            then
+                cd "$pathToFilteringPrgm"
+                dotnet FilteringTerminalArgs.dll "$pathToGuesses"/$schoolName/$fileName -no_output -just_filter_detectables -refilter_using_txt
+                echo Just cleaned up frames for $fileName!
+
+                # duration for this case is going to be inaccurate because it's much faster to clean up pre-filtered frames than to filter them from scratch
+                # temporary solution: just make the current duration negative, and extremely high in abs val
+                
+                # you won't be able to know how long filtering took, but you can add 1000000000 to time_taken_ms
+                # and this will tell you how long identifying took
+
+                # otherwise, just make sure to ignore negative values of time_taken_ms when analyzing guesses.json
+                dur=-1000000000
+            else
+                start=$(($(gdate +%s%N)/1000000))
+
+                cd "$pathToFilteringPrgm"
+                dotnet FilteringTerminalArgs.dll "$pathToGuesses"/$schoolName/$fileName -no_output -just_filter_detectables
+                echo Just generated and filtered frames for $fileName!
+
+                stop=$(($(gdate +%s%N)/1000000))
+                dur=$(echo "$stop - $start" | bc -l);
+            fi
+
+            echo Identifying...
+
+            cd "$pathToIdentifyingPrgm"
+            dotnet IdentifyUnknownVideo.dll $schoolName "$pathToGuesses"/$schoolName/$fileName "$pathToGuesses"/$schoolName/$fileName $dur -del_after_processing
+            echo Done guessing for $fileName!
+        fi
+    done
+done

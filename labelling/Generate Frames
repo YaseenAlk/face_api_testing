@@ -3,33 +3,42 @@
 # Still a work in progress!
 
 #   Pseudocode:
-
+#
+#   Define variables pathToAllVids (.../NIH2018_Data/Video),
+#       pathToFilterPrgm (folder with published FilteringTerminalArgs proj),
+#       pathToIdentifyingPrgm (folder with published IdentifyUnknownVideo proj),
+#       pathToExtractedVids (root folder to put extracted video frames into)
+#
 #   Make a variable called continue, and initialize it to true
-#   Make folder in /Users/$USER/Desktop called ExtractedVidFrames
-#   Make folder in /Users/$USER/Desktop/ExtractedVidFrames called Banneker
-#   Make folder in /Users/$USER/Desktop/ExtractedVidFrames called JFK
-#   Make folder in /Users/$USER/Desktop/ExtractedVidFrames called Unknown
-#   Go to the folder NIH2018_Data/Video
+#   Make the folder $pathToExtractedVids if it doesn't already exist
+#   Make the folder $pathToExtractedVids/Banneker if it doesn't already exist
+#   Make the folder $pathToExtractedVids/JFK if it doesn't already exist
+#   Make the folder $pathToExtractedVids/Unknown if it doesn't already exist
+#
+#   Go to $pathToAllVids
 #   for s from 1 to 5:
 #       if continue is true:
 #           Enter the folder /Session + s + /
-#           Make folder in /Users/$USER/Desktop/ExtractedVidFrames/Banneker called /Session + s + /
-#           Make folder in /Users/$USER/Desktop/ExtractedVidFrames/JFK called /Session + s + /
-#           Make folder in /Users/$USER/Desktop/ExtractedVidFrames/Unknown called /Session + s + /
+#           Make folder in $pathToExtractedVids/Banneker called /Session + s + /
+#           Make folder in $pathToExtractedVids/JFK called /Session + s + /
+#           Make folder in $pathToExtractedVids/Unknown called /Session + s + /
 #           for every file ending with the .MP4 extension
 #               Split the file name by "_" and store the first string in a var called name
+#
+#               make a variable called frameDir
+#
 #               if name starts with "p0"
-#                   Make the dir /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name if it doesn't already exist
-#                   count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name and store in a variable called count
-#                   Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name called (count + 1)
+#                   Make the dir $pathToExtractedVids/Banneker/Session$s/$name if it doesn't already exist
+#                   count the number of directories in $pathToExtractedVids/Banneker/Session$s/$name and store in a variable called count
+#                   Make a folder in $pathToExtractedVids/Banneker/Session$s/$name called (count + 1), and store the path in frameDir
 #               else if name starts with "p1"
-#                   Make the dir /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name if it doesn't already exist
-#                   count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name and store in a variable called count
-#                   Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name called (count + 1)
+#                   Make the dir $pathToExtractedVids/JFK/Session$s/$name if it doesn't already exist
+#                   count the number of directories in $pathToExtractedVids/JFK/Session$s/$name and store in a variable called count
+#                   Make a folder in $pathToExtractedVids/JFK/Session$s/$name called (count + 1), and store the path in frameDir
 #               else
-#                   Make the dir /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name if it doesn't already exist
-#                   count the number of directories in /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name and store in a variable called count
-#                   Make a folder in /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name called (count + 1)
+#                   Make the dir $pathToExtractedVids/Unknown/Session$s/$name if it doesn't already exist
+#                   count the number of directories in $pathToExtractedVids/Unknown/Session$s/$name and store in a variable called count
+#                   Make a folder in $pathToExtractedVids/Unknown/Session$s/$name called (count + 1), and store the path in frameDir
 #           
 #               calculate video duration using ffprobe and store it in a var called duration
 #               create variables called startTime and durationTime
@@ -41,27 +50,28 @@
 #                   set startTime to 0
 #                   set durationTime to duration
 #
-#               use ffmpeg to generate frames, starting at startTime and lasting durationTime, cutting the height and width in half, at 3 fps, using the name "frame%05d.bmp" and stored in the current folder
-#               cd to the folder containing the Filtering program
+#               use ffmpeg to generate frames, starting at startTime and lasting durationTime, cutting the height and width in half, at 3 fps, using the name "frame%05d.bmp" and stored in $frameDir
+#               cd to $pathToFilterPrgm
 #               run Filtering program to filter the newly created frames (thus saving space)
 #               echo Done processing $fileName!
 #           echo Done with Session $s!
 #       Stay on standby until "done" is entered; if "exit" is entered, set continue to false
 
 # Note: this script requires the following programs to be installed and aliased:
-# ffmpeg as ffmpeg
-# ffprobe as ffprobe
-# c# as dotnet
+#   ffmpeg as ffmpeg
+#   ffprobe as ffprobe
+#   c# as dotnet
 
 
-pathToAllVids="/Users/$USER/Dropbox (MIT)/NIH2018_Data/Video"
-pathToFilterPrgm="/Users/$USER/Desktop/Filtering/"
+pathToAllVids="/Volumes/My Passport/Dropbox (MIT)/NIH2018_Data/Video"
+pathToFilterPrgm="/Users/$USER/Desktop/Yaseen script files/Filtering/"
+pathToExtractedVids="/Volumes/My Passport/ExtractedVidFrames"
 continue=true
 
-mkdir /Users/$USER/Desktop/ExtractedVidFrames
-mkdir /Users/$USER/Desktop/ExtractedVidFrames/Banneker
-mkdir /Users/$USER/Desktop/ExtractedVidFrames/JFK
-mkdir /Users/$USER/Desktop/ExtractedVidFrames/Unknown
+mkdir -p "$pathToExtractedVids"
+mkdir -p "$pathToExtractedVids"/Banneker
+mkdir -p "$pathToExtractedVids"/JFK
+mkdir -p "$pathToExtractedVids"/Unknown
 
 cd "$pathToAllVids"
 
@@ -72,9 +82,9 @@ for s in `seq 1 5`;
 do
     if [ "$continue" = true ] ; then
         cd "$pathToAllVids/Session$s/"
-        mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/
-        mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/
-        mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/
+        mkdir -p "$pathToExtractedVids"/Banneker/Session$s/
+        mkdir -p "$pathToExtractedVids"/JFK/Session$s/
+        mkdir -p "$pathToExtractedVids"/Unknown/Session$s/
 
         for fileName in *.mp4 *.MP4; do
             #split name and store into #splitName:
@@ -87,19 +97,19 @@ do
             frameDir=""
 
             if [[ $name == p0* ]]; then
-                mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name/
-                count=$(ls -l /Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name | grep -c ^d)
-                frameDir="/Users/$USER/Desktop/ExtractedVidFrames/Banneker/Session$s/$name/$(($count + 1))"
+                mkdir -p "$pathToExtractedVids"/Banneker/Session$s/$name/
+                count=$(ls -l $pathToExtractedVids/Banneker/Session$s/$name | grep -c ^d)
+                frameDir="$pathToExtractedVids/Banneker/Session$s/$name/$(($count + 1))"
                 mkdir -p $frameDir
             elif [[ $name == p1* ]]; then
-                mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name/
-                count=$(ls -l /Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name | grep -c ^d)
-                frameDir="/Users/$USER/Desktop/ExtractedVidFrames/JFK/Session$s/$name/$(($count + 1))"
+                mkdir -p "$pathToExtractedVids"/JFK/Session$s/$name/
+                count=$(ls -l $pathToExtractedVids/JFK/Session$s/$name | grep -c ^d)
+                frameDir="$pathToExtractedVids/JFK/Session$s/$name/$(($count + 1))"
                 mkdir -p $frameDir
             else
-                mkdir -p /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name/
-                count=$(ls -l /Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name | grep -c ^d)
-                frameDir="/Users/$USER/Desktop/ExtractedVidFrames/Unknown/Session$s/$name/$(($count + 1))"
+                mkdir -p $"pathToExtractedVids"/Unknown/Session$s/$name/
+                count=$(ls -l $pathToExtractedVids/Unknown/Session$s/$name | grep -c ^d)
+                frameDir="$pathToExtractedVids/Unknown/Session$s/$name/$(($count + 1))"
                 mkdir -p $frameDir
             fi
 
@@ -125,19 +135,5 @@ do
         done
 
         echo Done with all the videos in Session $s!
-        if (( $(echo "$s < 5" | bc -l) )); then
-            echo Now that Session $s is done, you need to unsync "$pathToAllVids/Session$s" from Dropbox, and sync "$pathToAllVids/Session$(( $s + 1 ))"
-
-            reply=""
-            while [[ $reply != done ]] && [[ $reply != exit ]]; do
-                echo Type \'done\' \(without quotes\) when finished switching the synced folders, or type \'exit\' \(without quotes\) to quit the script at the current state.
-                read reply
-            done
-
-            if [[ $reply == exit ]]; then
-                continue=false
-                echo Exiting...
-            fi
-        fi
     fi
 done

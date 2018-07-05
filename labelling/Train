@@ -1,37 +1,41 @@
 #!/bin/bash
 
-# Still a work in progress!
-
 #   Pseudocode:
-
+#
+#   Define variables pathToTerminalUtils (folder with published TerminalUtils proj), 
+#       pathToExtractedVids (root folder to put extracted video frames into)
+#
 #   Make an array called schools with values Banneker and JFK
-
+#
 # -- Uploading Images --
 #   for every value in $schools: (Banneker, JFK)
 #       store the school name in a var called schoolName
 #       set schoolName to all lowercase (personGroupIds can only be lowercase)
-#       for i from 1 to 5:
-#           Enter the folder /Users/$USER/Desktop/ExtractedVidFrames/$schoolName/Session$i/
-#           for every folder in the directory: (p001, p002, ... or p100, p102, ...)
+#       for s from 1 to 5:
+#           for every folder in $pathToExtractedVids/$schoolName/Session$s/: (p001, p002, ... or p100, p102, ...)
 #               store the folder name in a var called pName
 #               get the id using the -getId TerminalUtils action and store in a var called pId
 #               if pId equals null:
 #                   create the person in personGroup $schoolName with the name $pName (using the -createPerson TerminalUtils action) and store the returned id in pId
-#               for every folder in the directory:
+#               for every folder in the directory: (1, 2, 3...)
 #                   store the folder name in a var called imgPath
 #                   run the -uploadImages TerminalUtils action with personGroupId $schoolName, personId $pId, image path $imgPath/training
-
+#
 # -- Training --
 #   for every value in $schools: (Banneker, JFK)
 #       store the school name in a var called schoolName
 #       train the dataset using the -train TerminalUtils action with personGroupId $schoolName
-
+#
 # Notes:
 # 1) Every time you want to run TerminalUtils, you need to cd to $pathToTerminalUtils
 # 2) personGroupIds must always be lowercase, so that means that you can't put it in a request URL unless its also lowercase
-# 3) This script assumes that each schoolName already has a personGroup created for it
-# 4) If you attempt to train a person group with no images in it, then the training will fail, and the program will stay in an infinite loop
-# 5) This script requires the following programs to be installed and aliased:
+# 3) This script assumes that each schoolName already has a largePersonGroup created for it
+# 4) This program makes an API call to retrieve the Microsoft personId for a given name (dotnet TerminalUtils.dll -getId $schoolName $pNameWithoutPath).
+#       This only works because each participant in this study has a unique name (e.g. p001 != p002)
+#       The API call simply lists all the people in the LargePersonGroup, and iterates through the list until it sees the first person whose name matches the experiment name.
+#       When using Microsoft Face API in the future, be sure that every Person in the LargePersonGroup has a unique name assigned to them, or else unexpected results may ensue.
+# 5) If you attempt to train a largePersonGroup with no images in it, then the training will fail, and the program will stay in an infinite loop
+# 6) This script requires the following programs to be installed and aliased:
 #       ffmpeg as ffmpeg
 #       ffprobe as ffprobe
 #       c# as dotnet
@@ -40,8 +44,8 @@
 #this is needed for the fileName for-loop
 shopt -s nullglob
 
-pathToTerminalUtils="/Users/$USER/Desktop/TerminalUtils"
-pathToExtractedVids="/Users/$USER/Desktop/ExtractedVidFrames"
+pathToTerminalUtils="/Users/prg/Desktop/Yaseen script files/TerminalUtils"
+pathToExtractedVids="/Volumes/My Passport/ExtractedVidFrames"
 
 # In this case, the script will always be in $pathToTerminalUtils, so no need to cd every time we want to use TerminalUtils
 cd "$pathToTerminalUtils"
@@ -54,7 +58,7 @@ do
     schoolName=$(echo "$schoolName" | tr '[:upper:]' '[:lower:]')
     for s in `seq 1 5`;
     do
-        for pName in $pathToExtractedVids/$schoolName/Session$s/*/
+        for pName in "$pathToExtractedVids"/$schoolName/Session$s/*/
         do
             pName=${pName%*/}
             pNameWithoutPath=${pName##*/}
@@ -63,9 +67,10 @@ do
                pId=$(dotnet TerminalUtils.dll -createPerson $schoolName $pNameWithoutPath)
             fi
 
-            for imgPath in $pName/*/
+            for imgPath in "$pName"/*/
             do
-                dotnet TerminalUtils.dll -uploadImages $schoolName $pId $imgPath/training
+                #echo imgPath: "$imgPath"
+                dotnet TerminalUtils.dll -uploadImages $schoolName $pId "$imgPath"/training
             done
         done
     done
@@ -76,4 +81,5 @@ for schoolName in "${schools[@]}"
 do
     schoolName=$(echo "$schoolName" | tr '[:upper:]' '[:lower:]')
     dotnet TerminalUtils.dll -train $schoolName
+    echo "Just trained $schoolName!"
 done

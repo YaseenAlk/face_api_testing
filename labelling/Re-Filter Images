@@ -1,0 +1,86 @@
+#!/bin/bash
+
+#   Pseudocode:
+
+#   Define variables pathToAllVids (.../NIH2018_Data/Video), 
+#       pathToFilterPrgm (folder with published FilteringTerminalArgs proj),
+#       pathToExtractedVids (root folder to put extracted video frames into)
+#
+#   Go to $pathToAllVids
+#   for s from 1 to 5:
+#           Enter the folder /Session + s + /
+#           for every file ending with the .MP4 extension (store file name in a var called fileName)
+#               Split the file name by "_" and store the first string in a var called name
+#
+#               make a variable called frameDir
+#
+#               if name starts with "p0"
+#                   set frameDir to $pathToExtractedVids/Banneker/Session$s/$name
+#               else if name starts with "p1"
+#                   set frameDir to $pathToExtractedVids/JFK/Session$s/$name
+#               else
+#                   set frameDir to $pathToExtractedVids/Unknown/Session$s/$name
+#
+#               go to $frameDir
+#
+#               for every subfolder:
+#                   run Filtering program to filter the newly created frames (thus saving space), and use the no_output flag
+#                   echo Re-filtered $fileName!
+#
+#           echo Done with Session $s!
+
+# Note: this script requires the following programs to be installed and aliased:
+#   ffmpeg as ffmpeg
+#   ffprobe as ffprobe
+#   c# as dotnet
+
+# Also note: Every time you want to run FilteringTerminalArgs, you need to cd to $pathToFilterPrgm
+
+pathToAllVids="/Volumes/My Passport/Dropbox (MIT)/NIH2018_Data/Video"
+pathToFilterPrgm="/Users/$USER/Desktop/Yaseen script files/Filtering/"
+pathToExtractedVids="/Volumes/My Passport/ExtractedVidFrames"
+continue=true
+
+cd "$pathToAllVids"
+
+#this is needed for the fileName for-loop
+shopt -s nullglob
+
+for s in `seq 1 5`;
+do
+    if [ "$continue" = true ] ; then
+        cd "$pathToAllVids/Session$s/"
+    
+        for fileName in *.mp4 *.MP4; do
+            #split name and store into #splitName:
+            OIFS=$sFS
+            IFS='_' read -r -a splitName <<< "$fileName"
+            IFS=$OIFS
+
+            #store first element into $name:
+            name=${splitName[0]}
+            frameDir=""
+
+            if [[ $name == p0* ]]; then
+                frameDir="$pathToExtractedVids/Banneker/Session$s/$name"
+            elif [[ $name == p1* ]]; then
+                frameDir="$pathToExtractedVids/JFK/Session$s/$name"
+            else
+                frameDir="$pathToExtractedVids/Unknown/Session$s/$name"
+            fi
+
+
+            cd "$frameDir"
+
+            for d in */ ; do
+                cd "$pathToFilterPrgm"
+                echo "$frameDir"/$d
+                dotnet FilteringTerminalArgs.dll "$frameDir"/$d -no_output
+                echo Re-filtered $fileName!
+            done
+            
+        done
+
+        echo Done with all the videos in Session $s!
+    fi
+done
