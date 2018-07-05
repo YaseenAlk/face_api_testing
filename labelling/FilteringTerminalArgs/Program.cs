@@ -27,7 +27,7 @@ namespace Filtering
         const string LIBRARY_DATA_FILE = "library.txt"; // name of the file to save library-worthy frames into
         
         
-        const decimal MIN_YAW_DIFF = 10.0m; //units are in degrees, and range is [-90, 90]
+        const decimal MIN_YAW_DIFF = 5.0m; //units are in degrees, and range is [-90, 90]
         const int FRAMES_PER_YAW_VAL = 2; //number of frames to maintain for a small yaw value range dictated by MIN_YAW_DIFF
         static Dictionary<decimal, int> libraryCount;
 
@@ -37,13 +37,15 @@ namespace Filtering
         static Dictionary<int, string> libraryFrames;
 
         static bool no_output = false;
+        static bool justFilterDetectable = false;
+        static bool reFilterUsingTxt = false;
 
-        // Usage: dotnet FilteringTerminalArgs.dll <frame img dir> [-no_output (optional)]
+        // Usage: dotnet FilteringTerminalArgs.dll <frame img dir> [-no_output (optional)] [-just_filter_detectables (optional)] [-refilter_using_txt (optional)]
         static async Task Main(string[] args)
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Usage: dotnet FilteringTerminalArgs.dll <frame img dir> [-no_output (optional)]");
+                Console.WriteLine("Usage: dotnet FilteringTerminalArgs.dll <frame img dir> [-no_output (optional)] [-just_filter_detectables (optional)] [-refilter_using_txt (optional)]");
                 return;
             }
 
@@ -56,6 +58,16 @@ namespace Filtering
             if (Array.IndexOf(args, "-no_output") > -1)
             {
                 no_output = true;
+            }
+
+            if (Array.IndexOf(args, "-just_filter_detectables") > -1)
+            {
+                justFilterDetectable = true;
+            }
+
+            if (Array.IndexOf(args, "-refilter_using_txt") > -1)
+            {
+                reFilterUsingTxt = true;
             }
 
             InitializeInstanceData();
@@ -72,11 +84,31 @@ namespace Filtering
             //int num = await HowManyHaveFacesAsync(maxCount);
             //Console.WriteLine("Of the " + maxCount + " frames, " + num + " have detectable faces");
             if (!File.Exists(dir + USEFUL_DATA_FILE))
+            {
+                if (reFilterUsingTxt)
+                {
+                    Console.WriteLine("Cannot re-filter using " + USEFUL_DATA_FILE + " because it does not exist in this directory.");
+                    return;
+                }
                 await FilterDetectableFacesAsync(maxCount, true); //for non-detectable faces
-            else    //not sure why you would run the program again, but just in case
+            }
+            else if (reFilterUsingTxt)
+            {
+                CleanUpUsingTxtFile(dirs);
+            }
+            else if (justFilterDetectable)
+            {
+                Console.WriteLine("It seems that detectable faces have already been filtered in " + dir);
+                return;
+            }
+            else
                 LoadDetectableFaceList();
-            PrepareToFilterLibrary();
-            FilterLibraryFaces();   //once we have a datafile with yaw values saved, this should only need to happen locally (and should be very fast)
+            
+            if (!justFilterDetectable)
+            {
+                PrepareToFilterLibrary();
+                FilterLibraryFaces();   //once we have a datafile with yaw values saved, this should only need to happen locally (and should be very fast)
+            }
         }
 
         static void InitializeInstanceData()
@@ -248,6 +280,29 @@ namespace Filtering
             System.IO.File.WriteAllLines(pathToSave, dataToSave);
             
             if (!no_output) Console.WriteLine("Data saved!");
+        }
+
+        static void CleanUpUsingTxtFile(string[] dirs)
+        {
+            LoadDetectableFaceList();
+            List<string> detectableFileNames = new List<string>();
+            foreach (KeyValuePair<int, string> entry in detectedFrames)
+                detectableFileNames.Add("frame" + entry.Key.ToString(INT_FORMAT) + FILE_EXTENSION.ToLower());
+            
+            foreach (string fileDir in dirs)
+            {
+                string ext = Path.GetExtension(fileDir);
+
+                if (ext.ToLower() == FILE_EXTENSION.ToLower())
+                {
+                    string fileName = Path.GetFileName(fileDir).ToLower();
+                
+                    if (!detectableFileNames.Contains(fileName)
+                    {
+                        File.Delete(path);
+                    }
+                }
+            }
         }
 
         static async Task<string> UploadImageGetFaceAndYawAsync(int picNum)
@@ -447,6 +502,7 @@ namespace Filtering
         {
             if (!File.Exists(path))
             {
+                Console.WriteLine("Unable to find file in path: " + path);
                 return "";
             }
             string json = System.IO.File.ReadAllText(path);
