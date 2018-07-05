@@ -297,9 +297,9 @@ namespace Filtering
                 {
                     string fileName = Path.GetFileName(fileDir).ToLower();
                 
-                    if (!detectableFileNames.Contains(fileName)
+                    if (!detectableFileNames.Contains(fileName))
                     {
-                        File.Delete(path);
+                        File.Delete(fileDir);
                     }
                 }
             }
