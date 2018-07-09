@@ -1,0 +1,11 @@
+#!/bin/bash
+
+pathToAllVids="/Volumes/My Passport/Dropbox (MIT)/NIH2018_Data/Video"
+pathToGuesses="/Volumes/My Passport/UnknownVidGuesses"
+pathToCategorizingPrgm="/Users/$USER/Desktop/Yaseen script files/Categorizing"
+
+cd "$pathToCategorizingPrgm"
+
+echo Running Categorizing program...
+dotnet CategorizeIdentifiedVids.dll "$pathToAllVids" "$pathToGuesses" -move_files
+echo Done running categorizing program.

@@ -17,9 +17,17 @@ namespace CategorizeIdentifiedVids
         const string GUESS_FILE = "guesses.json";
 
         static string vidPath, guessPath;
+        static bool moveFiles = false;
 
+
+        // Usage: dotnet CategorizeIdentifiedVids.dll <path to videos> <path to guesses> [-move_files (optional)]
         static void Main(string[] args)
         {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("Usage: dotnet CategorizeIdentifiedVids.dll <path to videos> <path to guesses> [-move_files (optional)]");
+                return;
+            }
             if (Directory.Exists(args[0]))
             {
                 vidPath = args[0];
@@ -38,6 +46,11 @@ namespace CategorizeIdentifiedVids
             {
                 Console.WriteLine("Directory '" + args[1] + "' does not exist.");
                 return;
+            }
+
+            if (Array.IndexOf(args, "-move_files") > -1)
+            {
+                moveFiles = true;
             }
 
             CategorizeSchool("banneker", NUM_BANNEKER);
@@ -70,22 +83,38 @@ namespace CategorizeIdentifiedVids
             {
                 string fileName = Path.GetFileName(vid);
                 
-                string path = Path.Join(schoolGuessPath, fileName);
-                if (!Directory.Exists(path))
+                string guessFolderPath = Path.Join(schoolGuessPath, fileName);
+                if (!Directory.Exists(guessFolderPath))
                 {
                     Console.WriteLine("Weird! Looks like file '" + fileName + "' from school '" + schoolName + "' was never even processed! (no guess folder found) Skipping...");
                     continue;
                 }
 
-                string guessesPath = Path.Join(path, GUESS_FILE);
-                if (!File.Exists(guessesPath))
+                string jsonFilePath = Path.Join(guessFolderPath, GUESS_FILE);
+                if (!File.Exists(jsonFilePath))
                 {
                     Console.WriteLine("Weird! Looks like file '" + fileName + "' from school '" + schoolName + "' was never identified! (no " + GUESS_FILE + " found) Skipping...");
                     continue;
                 }
 
-                string final_rec = GetFinalRecFromJSONPath(guessesPath);
+                string final_rec = GetFinalRecFromJSONPath(jsonFilePath);
                 matches.Add(fileName, final_rec); 
+
+                if (moveFiles)
+                {
+                    string subjectFolder = Path.Join(schoolVidPath, final_rec.ToLower());
+                    if (!Directory.Exists(subjectFolder))
+                    {
+                        Directory.CreateDirectory(subjectFolder);
+                        string mislabelled = Path.Join(subjectFolder, "mislabelled");
+                        Directory.CreateDirectory(mislabelled);
+                    }
+
+                    string oldPath = vid;
+                    string newPath = Path.Join(subjectFolder, fileName);
+
+                    File.Move(oldPath, newPath);
+                }
             }
 
             GenerateCSVFromMatches(matches, "guesses_" + schoolName + ".csv");
