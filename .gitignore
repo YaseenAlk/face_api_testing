@@ -49,6 +49,11 @@ labelling/IdentifyUnknownVideo/bin/
 labelling/IdentifyUnknownVideo/obj/
 labelling/IdentifyUnknownVideo/IdentifyUnknownVideo.sln
 
+labelling/CategorizeIdentifiedVids/.vs/
+labelling/CategorizeIdentifiedVids/bin/
+labelling/CategorizeIdentifiedVids/obj/
+labelling/CategorizeIdentifiedVids/CategorizeIdentifiedVids.sln
+
 
 unity/UnityFaceIDHelper/.vs/
 unity/UnityFaceIDHelper/bin/
