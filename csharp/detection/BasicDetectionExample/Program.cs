@@ -11,7 +11,7 @@ namespace BasicDetectionExample
     static class Program
     {
         // Replace <Subscription Key> with your valid subscription key.
-        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../../api_access_key.txt", "subscriptionKey");
 
         // NOTE: You must use the same region in your REST call as you used to
         // obtain your subscription keys. For example, if you obtained your
@@ -21,7 +21,7 @@ namespace BasicDetectionExample
         // Free trial subscription keys are generated in the westcentralus region.
         // If you use a free trial subscription key, you shouldn't need to change
         // this region.
-        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
+        static readonly string uriBase = ReadJsonStrFromFile("../../../api_access_key.txt", "uriBase");
 
         static void Main()
         {

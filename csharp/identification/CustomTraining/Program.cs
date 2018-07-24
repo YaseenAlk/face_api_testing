@@ -14,9 +14,9 @@ namespace CustomTraining
 {
     static class Program
     {
-        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../../api_access_key.txt", "subscriptionKey");
 
-        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
+        static readonly string uriBase = ReadJsonStrFromFile("../../../api_access_key.txt", "uriBase");
 
         static string personGroupId = "sample_group_k";
         static string personGroupName = "Person Group using the Sample Data";

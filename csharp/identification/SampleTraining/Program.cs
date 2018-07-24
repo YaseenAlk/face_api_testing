@@ -14,9 +14,9 @@ namespace SampleTraining
 {
     static class Program
     {
-        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../../api_access_key.txt", "subscriptionKey");
 
-        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
+        static readonly string uriBase = ReadJsonStrFromFile("../../../api_access_key.txt", "uriBase");
 
         const string personGroupId = "potato";
         const string personGroupName = "Person Group using the Sample Data";

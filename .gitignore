@@ -1,58 +1,58 @@
 api_access_key.txt
-labelling/Test Script
+csharp/labelling/Test Script
 
 .vscode/
 
-detection/BasicDetectionExample/.vs/
-detection/BasicDetectionExample/bin/
-detection/BasicDetectionExample/obj/
-detection/BasicDetectionExample/BasicDetectionExample.sln
+csharp/detection/BasicDetectionExample/.vs/
+csharp/detection/BasicDetectionExample/bin/
+csharp/detection/BasicDetectionExample/obj/
+csharp/detection/BasicDetectionExample/BasicDetectionExample.sln
 
-detection/WPFDetectionExample/.vs/
-detection/WPFDetectionExample/DetectionExample/bin/
-detection/WPFDetectionExample/DetectionExample/obj/
+csharp/detection/WPFDetectionExample/.vs/
+csharp/detection/WPFDetectionExample/DetectionExample/bin/
+csharp/detection/WPFDetectionExample/DetectionExample/obj/
 
-identification/.vscode/
+csharp/identification/.vscode/
 
-identification/CustomTraining/.vs/
-identification/CustomTraining/bin/
-identification/CustomTraining/obj/
-identification/CustomTraining/CustomTraining.sln
+csharp/identification/CustomTraining/.vs/
+csharp/identification/CustomTraining/bin/
+csharp/identification/CustomTraining/obj/
+csharp/identification/CustomTraining/CustomTraining.sln
 
-identification/SampleTraining/.vs/
-identification/SampleTraining/bin/
-identification/SampleTraining/obj/
-identification/SampleTraining/SampleTraining.sln
+csharp/identification/SampleTraining/.vs/
+csharp/identification/SampleTraining/bin/
+csharp/identification/SampleTraining/obj/
+csharp/identification/SampleTraining/SampleTraining.sln
 
-identification/Identification/.vs/
-identification/Identification/bin/
-identification/Identification/obj/
-identification/Identification/Identification.sln
+csharp/identification/Identification/.vs/
+csharp/identification/Identification/bin/
+csharp/identification/Identification/obj/
+csharp/identification/Identification/Identification.sln
 
-TerminalUtils/.vs/
-TerminalUtils/bin/
-TerminalUtils/obj/
-TerminalUtils/TerminalUtils.sln
+csharp/TerminalUtils/.vs/
+csharp/TerminalUtils/bin/
+csharp/TerminalUtils/obj/
+csharp/TerminalUtils/TerminalUtils.sln
 
-labelling/FilteringExecutable/.vs/
-labelling/FilteringExecutable/bin/
-labelling/FilteringExecutable/obj/
-labelling/FilteringExecutable/FilteringExecutable.sln
+csharp/labelling/FilteringExecutable/.vs/
+csharp/labelling/FilteringExecutable/bin/
+csharp/labelling/FilteringExecutable/obj/
+csharp/labelling/FilteringExecutable/FilteringExecutable.sln
 
-labelling/FilteringTerminalArgs/.vs/
-labelling/FilteringTerminalArgs/bin/
-labelling/FilteringTerminalArgs/obj/
-labelling/FilteringTerminalArgs/FilteringTerminalArgs.sln
+csharp/labelling/FilteringTerminalArgs/.vs/
+csharp/labelling/FilteringTerminalArgs/bin/
+csharp/labelling/FilteringTerminalArgs/obj/
+csharp/labelling/FilteringTerminalArgs/FilteringTerminalArgs.sln
 
-labelling/IdentifyUnknownVideo/.vs/
-labelling/IdentifyUnknownVideo/bin/
-labelling/IdentifyUnknownVideo/obj/
-labelling/IdentifyUnknownVideo/IdentifyUnknownVideo.sln
+csharp/labelling/IdentifyUnknownVideo/.vs/
+csharp/labelling/IdentifyUnknownVideo/bin/
+csharp/labelling/IdentifyUnknownVideo/obj/
+csharp/labelling/IdentifyUnknownVideo/IdentifyUnknownVideo.sln
 
-labelling/CategorizeIdentifiedVids/.vs/
-labelling/CategorizeIdentifiedVids/bin/
-labelling/CategorizeIdentifiedVids/obj/
-labelling/CategorizeIdentifiedVids/CategorizeIdentifiedVids.sln
+csharp/labelling/CategorizeIdentifiedVids/.vs/
+csharp/labelling/CategorizeIdentifiedVids/bin/
+csharp/labelling/CategorizeIdentifiedVids/obj/
+csharp/labelling/CategorizeIdentifiedVids/CategorizeIdentifiedVids.sln
 
 
 unity/UnityFaceIDHelper/.vs/
