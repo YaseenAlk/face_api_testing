@@ -586,12 +586,12 @@ namespace UnityFaceIDHelper
     // made to match the face_msgs msg style
     public struct FaceAPIResponse
     {
-        public byte response_type;
+        public short response_type;
         public string response;
 
         public FaceAPIResponse(ResponseType rType, string rsp)
         {
-            response_type = (byte)rType;
+            response_type = (short)rType;
             response = rsp;
         }
     }
