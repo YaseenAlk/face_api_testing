@@ -526,7 +526,7 @@ namespace UnityFaceIDHelper
     public class FaceAPICall<T>
     {
         public FaceAPIRequest request;
-        private FaceAPIResponse response;
+        public FaceAPIResponse response;
 
         public Func<Task<FaceAPIResponse>> apiCall;
         public Func<FaceAPIResponse, T> processResponse;
