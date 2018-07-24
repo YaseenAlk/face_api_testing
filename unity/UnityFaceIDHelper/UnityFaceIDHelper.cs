@@ -12,7 +12,7 @@ using Newtonsoft.Json.Linq;
 
 using UnityEngine;
 using UnityEngine.Networking;
-
+using UnityFaceIDHelper;
 
 namespace UnityFaceIDHelper
 {
@@ -37,234 +37,351 @@ namespace UnityFaceIDHelper
             client = new UnityWebRequest();
         }
 
-        public async Task<Dictionary<string, decimal>> IdentifyBiggestInImageAsync(string pathToImg)
-        {
-            byte[] imgData = GetImageAsByteArray(pathToImg);
-            return await IdentifyBiggestInImageAsync(imgData);
-        }
-
-        public async Task<Dictionary<string, decimal>> IdentifyBiggestInImageAsync(byte[] imgData)
-        {
-            try
-            {
-                List<string> faceIds = await DetectForIdentifyingAsync(imgData);
-
-                if (faceIds.Count > 0)
-                    return await IdentifyFromFaceIdAsync(faceIds[0]); // only try identifying the biggest face
-                else
-                    return new Dictionary<string, decimal>();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return null;
-            }
-        }
-
-        // takes in a name, outputs personId or "" if an exception occurs
-        public async Task<string> CreatePersonAsync(string name, string data = "")
-        {
-            try
-            {
-                return await CreateLargePersonGroupPersonAsync(name, data);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return "";
-            }
-        }
-
         //takes in an image, outputs the number of faces detected or -1 if an exception occurs
-        public async Task<int> CountFacesAsync(byte[] imgData)
+        public FaceAPICall<int> CountFacesCall(byte[] imgData)
         {
-            try
+            FaceAPICall<int> call = new FaceAPICall<int>
             {
-                List<string> faceIds = await DetectForIdentifyingAsync(imgData);
-                return faceIds.Count;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return -1;
-            }
+                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.FACE_DETECT, ContentType.CONTENT_STREAM, "", imgData),
+                apiCall = DetectForIdentifyingRspAsync(imgData),
+                processResponse = CountFacesProcessRsp(),
+                defaultResult = -1
+            };
+            return call;
         }
 
-        //takes in a personId + img, outputs a persistedFaceId or "" if an exception occurs
-        public async Task<string> AddFaceAsync(string personId, byte[] imgData)
+        // slight modification of DetectForIdentifyingRspProcessRsp()
+        private Func<FaceAPIResponse, int> CountFacesProcessRsp()
         {
-            try
+            return (FaceAPIResponse rsp) =>
             {
-                return await AddFaceToLargePersonGroupPersonAsync(personId, imgData);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return "";
-            }
-        }
+                List<string> detectedIds = new List<string>();
 
-        //takes in a personId + persistedFaceId, returns false if an exception occurs or deletes the img & returns true
-        public async Task<bool> DeleteFaceAsync(string personId, string persistedFaceId)
-        {
-            try
-            {
-                return await DeleteFaceFromLargePersonGroupPersonAsync(personId, persistedFaceId);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return false;
-            }
-        }
+                string jsonRsp = rsp.response;
 
-        //takes in a personId, returns the name associated with the ID, or "" if an exception occurs
-        public async Task<string> GetNameFromIDAsync(string personId)
-        {
-            try
-            {
-                return await GetNameFromLargePersonGroupPersonPersonIdAsync(personId);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return "";
-            }
-        }
+                JArray data = (JArray)JsonConvert.DeserializeObject(jsonRsp);   //data should just be {"personId": "..."}
+                foreach (JObject face in data)
+                {
+                    detectedIds.Add(face["faceId"].Value<string>());
+                }
 
-        //returns true if api call is successful; false if an exception occurs
-        public async Task<bool> StartTrainingAsync()
-        {
-            try
-            {
-                return await StartTrainingLargePersonGroupAsync();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return false;
-            }
+                return detectedIds.Count;
+            };
         }
 
         //returns one of the three constants defined at the beginning of the program, or TRAINING_API_ERROR if an exception occurs
-        public async Task<string> GetTrainingStatusAsync()
+        public FaceAPICall<string> GetLargePersonGroupTrainingStatusCall()
         {
-            try
+            byte[] empty = Encoding.UTF8.GetBytes("{}");
+            FaceAPICall<string> call = new FaceAPICall<string>
             {
-                return await GetLargePersonGroupTrainingStatusAsync();
-            }
-            catch (Exception e)
+                request = new FaceAPIRequest(RequestMethod.HTTP_GET, RequestType.LARGEPERSONGROUP_GETTRAININGSTATUS, ContentType.CONTENT_JSON, "", empty),
+                apiCall = GetLargePersonGroupTrainingStatusRspAsync(),
+                processResponse = GetLargePersonGroupTrainingStatusProcessRsp(),
+                defaultResult = TRAINING_API_ERROR
+            };
+            return call;
+        }
+
+        private Func<Task<FaceAPIResponse>> GetLargePersonGroupTrainingStatusRspAsync()
+        {
+            return async () => {
+                string URI = uriBase + "largepersongroups/" + personGroupId + "/training";
+                byte[] empty = Encoding.UTF8.GetBytes("{}");
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Checking the status of the training", URI, empty, "application/json", "GET");
+
+                return rsp;
+            };
+        }
+
+        private Func<FaceAPIResponse, string> GetLargePersonGroupTrainingStatusProcessRsp()
+        {
+            return (FaceAPIResponse rsp) => {
+                string jsonRsp = rsp.response;
+
+                JObject data = (JObject)JsonConvert.DeserializeObject(jsonRsp);
+
+                return data["status"].Value<string>();
+            };
+        }
+
+        //returns true if api call is successful; false if an exception occurs
+        public FaceAPICall<bool> StartTrainingLargePersonGroupCall()
+        {
+            byte[] empty = Encoding.UTF8.GetBytes("{}");
+            FaceAPICall<bool> call = new FaceAPICall<bool>
             {
-                Console.WriteLine(e.ToString());
-                return TRAINING_API_ERROR;
-            }
+                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.LARGEPERSONGROUP_TRAIN, ContentType.CONTENT_JSON, "", empty),
+                apiCall = StartTrainingLargePersonGroupRspAsync(),
+                processResponse = StartTrainingLargePersonGroupProcessRsp(),
+                defaultResult = false
+            };
+            return call;
         }
 
-        private async Task<string> GetLargePersonGroupTrainingStatusAsync()
+        private Func<Task<FaceAPIResponse>> StartTrainingLargePersonGroupRspAsync()
         {
-            string URI = uriBase + "largepersongroups/" + personGroupId + "/training";
+            return async () => {
+                string URI = uriBase + "largepersongroups/" + personGroupId + "/train";
+                byte[] empty = Encoding.UTF8.GetBytes("{}");
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Training the " + personGroupId + " LargePersonGroup using the added images", URI, empty, "application/json", "POST");
+
+                return rsp;
+            };
+        }
+
+        private Func<FaceAPIResponse, bool> StartTrainingLargePersonGroupProcessRsp()
+        {
+            return (FaceAPIResponse rsp) => {
+                string jsonRsp = rsp.response;
+
+                return jsonRsp == "";
+            };
+        }
+
+        //takes in a personId, returns the name associated with the ID, or "" if an exception occurs
+        public FaceAPICall<string> GetNameFromLargePersonGroupPersonPersonIdCall(string personId)
+        {
             byte[] empty = Encoding.UTF8.GetBytes("{}");
-            string trainRsp = await MakeUnityRequestAsync("Checking the status of the training", URI, empty, "application/json", "GET");
-            JObject data = (JObject)JsonConvert.DeserializeObject(trainRsp);
-            return data["status"].Value<string>();
+            FaceAPICall<string> call = new FaceAPICall<string>
+            {
+                request = new FaceAPIRequest(RequestMethod.HTTP_GET, RequestType.LARGEPERSONGROUPPERSON_GET, ContentType.CONTENT_JSON, "", empty),
+                apiCall = GetNameFromLargePersonGroupPersonPersonIdRspAsync(personId),
+                processResponse = GetNameFromLargePersonGroupPersonPersonIdProcessRsp(),
+                defaultResult = ""
+            };
+            return call;
         }
 
-        private async Task<bool> StartTrainingLargePersonGroupAsync()
+        private Func<Task<FaceAPIResponse>> GetNameFromLargePersonGroupPersonPersonIdRspAsync(string personId)
         {
-            string URI = uriBase + "largepersongroups/" + personGroupId + "/train";
+            return async () => {
+                string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + personId;
+                byte[] empty = Encoding.UTF8.GetBytes("{}");
+
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Retrieve Person associated with ID", URI, empty, "application/json", "GET");
+                return rsp;
+            };
+        }
+
+        private Func<FaceAPIResponse, string> GetNameFromLargePersonGroupPersonPersonIdProcessRsp()
+        {
+            return (FaceAPIResponse rsp) => {
+                string jsonRsp = rsp.response;
+
+                JObject data = (JObject)JsonConvert.DeserializeObject(jsonRsp);
+
+                return data["name"].Value<string>();
+            };
+        }
+
+        //takes in a personId + persistedFaceId, returns false if an exception occurs or deletes the img & returns true
+        public FaceAPICall<bool> DeleteFaceFromLargePersonGroupPersonCall(string personId, string persistedFaceId)
+        {
             byte[] empty = Encoding.UTF8.GetBytes("{}");
-            string trainRsp = await MakeUnityRequestAsync("Training the " + personGroupId + " LargePersonGroup using the added images", URI, empty, "application/json", "POST");
-            return trainRsp == "";
+            FaceAPICall<bool> call = new FaceAPICall<bool>
+            {
+                request = new FaceAPIRequest(RequestMethod.HTTP_DELETE, RequestType.LARGEPERSONGROUPPERSON_DELETEFACE, ContentType.CONTENT_JSON, "", empty),
+                apiCall = DeleteFaceFromLargePersonGroupPersonRspAsync(personId, persistedFaceId),
+                processResponse = DeleteFaceFromLargePersonGroupPersonProcessRsp(),
+                defaultResult = false
+            };
+            return call;
         }
 
-        private async Task<string> GetNameFromLargePersonGroupPersonPersonIdAsync(string personId)
+        private Func<Task<FaceAPIResponse>> DeleteFaceFromLargePersonGroupPersonRspAsync(string personId, string persistedFaceId)
         {
-            string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + personId;
-            byte[] empty = Encoding.UTF8.GetBytes("{}");
+            return async () => {
+                string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + personId + "/persistedFaces/" + persistedFaceId;
+                byte[] empty = Encoding.UTF8.GetBytes("{}");
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Removing Image from " + personId, URI, empty, "application/json", "DELETE");
 
-            string rsp = await MakeUnityRequestAsync("Retrieve Person associated with ID", URI, empty, "application/json", "GET");
-            JObject data = (JObject)JsonConvert.DeserializeObject(rsp);
-            return data["name"].Value<string>();
+                return rsp;
+            };
         }
 
-        private async Task<bool> DeleteFaceFromLargePersonGroupPersonAsync(string personId, string persistedFaceId)
+        private Func<FaceAPIResponse, bool> DeleteFaceFromLargePersonGroupPersonProcessRsp()
         {
-            string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + personId + "/persistedFaces/" + persistedFaceId;
-            byte[] empty = Encoding.UTF8.GetBytes("{}");
-            string rsp = await MakeUnityRequestAsync("Removing Image from " + personId, URI, empty, "application/octet-stream", "DELETE");
-            return rsp == "";
+            return (FaceAPIResponse rsp) => {
+                string jsonRsp = rsp.response;
+
+                return jsonRsp == "";
+            };
         }
 
-        private async Task<string> AddFaceToLargePersonGroupPersonAsync(string personId, byte[] img)
+        //takes in a personId + img, outputs a persistedFaceId or "" if an exception occurs
+        public FaceAPICall<string> AddFaceToLargePersonGroupPersonCall(string personId, byte[] img)
         {
-            string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + personId + "/persistedFaces?";
-
-            string rsp = await MakeUnityRequestAsync("Adding Image to " + personId, URI, img, "application/octet-stream", "POST");
-
-            JObject data = (JObject)JsonConvert.DeserializeObject(rsp);   //data should just be {"persistedFaceId": "..."}
-            return data["persistedFaceId"].Value<string>();
+            FaceAPICall<string> call = new FaceAPICall<string>
+            {
+                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.LARGEPERSONGROUPPERSON_ADDFACE, ContentType.CONTENT_STREAM, "", img),
+                apiCall = AddFaceToLargePersonGroupPersonRspAsync(personId, img),
+                processResponse = AddFaceToLargePersonGroupPersonProcessRsp(),
+                defaultResult = ""
+            };
+            return call;
         }
 
-        private async Task<string> CreateLargePersonGroupPersonAsync(string name, string data)
+        private Func<Task<FaceAPIResponse>> AddFaceToLargePersonGroupPersonRspAsync(string personId, byte[] img)
         {
-            string URI = uriBase + "largepersongroups/" + personGroupId + "/persons";
-            byte[] encoded = Encoding.UTF8.GetBytes("{'name': '" + name + "', 'userData': '" + data + "'}");
-            string rsp = await MakeUnityRequestAsync("Adding Person to Person Group", URI, encoded, "application/json", "POST");
-            
-            JObject returnedData = (JObject)JsonConvert.DeserializeObject(rsp);
-            return returnedData["personId"].Value<string>();
+            return async () => {
+                string URI = uriBase + "largepersongroups/" + personGroupId + "/persons/" + personId + "/persistedFaces?";
+
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Adding Image to " + personId, URI, img, "application/octet-stream", "POST");
+
+                return rsp;
+            };
         }
 
-        private async Task<Dictionary<string, decimal>> IdentifyFromFaceIdAsync(string faceId)
+        private Func<FaceAPIResponse, string> AddFaceToLargePersonGroupPersonProcessRsp()
         {
-            string URI = uriBase + "identify";
+            return (FaceAPIResponse rsp) => {
+                string jsonRsp = rsp.response;
+
+                JObject data = (JObject)JsonConvert.DeserializeObject(jsonRsp);   //data should just be {"persistedFaceId": "..."}
+
+                return data["persistedFaceId"].Value<string>();
+            };
+        }
+
+        // takes in a name, outputs personId or "" if an exception occurs
+        public FaceAPICall<string> CreateLargePersonGroupPersonCall(string name, string data = "")
+        {
+            string reqBody = "{'name': '" + name + "', 'userData': '" + data + "'}";
+            byte[] req = Encoding.UTF8.GetBytes(reqBody);
+
+            FaceAPICall<string> call = new FaceAPICall<string>
+            {
+                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.LARGEPERSONGROUPPERSON_CREATE, ContentType.CONTENT_JSON, "", req),
+                apiCall = CreateLargePersonGroupPersonRspAsync(name, data),
+                processResponse = CreateLargePersonGroupPersonProcessRsp(),
+                defaultResult = ""
+            };
+            return call;
+        }
+
+        private Func<Task<FaceAPIResponse>> CreateLargePersonGroupPersonRspAsync(string name, string data)
+        {
+            return async () => {
+                string URI = uriBase + "largepersongroups/" + personGroupId + "/persons";
+                byte[] encoded = Encoding.UTF8.GetBytes("{'name': '" + name + "', 'userData': '" + data + "'}");
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Adding Person to Person Group", URI, encoded, "application/json", "POST");
+
+                return rsp;
+            };
+        }
+
+        private Func<FaceAPIResponse, string> CreateLargePersonGroupPersonProcessRsp()
+        {
+            return (FaceAPIResponse rsp) => {
+                string jsonRsp = rsp.response;
+
+                JObject returnedData = (JObject)JsonConvert.DeserializeObject(jsonRsp);
+
+                return returnedData["personId"].Value<string>();
+            };
+        }
+
+        public FaceAPICall<Dictionary<string, decimal>> IdentifyFromFaceIdCall(string faceId)
+        {
             string reqBody = "{\"largePersonGroupId\": \"" + personGroupId + "\", \"faceIds\": [\"" + faceId + "\"]}";
             byte[] req = Encoding.UTF8.GetBytes(reqBody);
 
-            string rsp = await MakeUnityRequestAsync("Identify person using faceId", URI, req, "application/json", "POST");
-            JArray data = (JArray) JsonConvert.DeserializeObject(rsp);
-            //data should be {[{"faceId":"...", "candidates": [{"personId":"...", "confidence": #.##}, {"personId":"...", "confidence": #.##}] }]}
-
-            JObject faceAndCandidates = (JObject) data[0];    //single face, potentially many candidates
-            Dictionary<string, decimal> idsAndConfidences = new Dictionary<string, decimal>();
-                
-            JArray candidates = (JArray) faceAndCandidates["candidates"];
-            foreach (JObject cand in candidates)
+            return new FaceAPICall<Dictionary<string, decimal>>
             {
-                idsAndConfidences.Add(cand["personId"].Value<string>(), cand["confidence"].Value<decimal>());
-            }
+                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.FACE_IDENTIFY, ContentType.CONTENT_JSON, "", req),
+                apiCall = IdentifyFromFaceIdRspAsync(faceId),
+                processResponse = IdentifyFromFaceIdProcessRsp(),
+                defaultResult = null
+            };
+        }
 
-            return idsAndConfidences;
+        private Func<Task<FaceAPIResponse>> IdentifyFromFaceIdRspAsync(string faceId)
+        {
+            return async () => {
+                string URI = uriBase + "identify";
+                string reqBody = "{\"largePersonGroupId\": \"" + personGroupId + "\", \"faceIds\": [\"" + faceId + "\"]}";
+                byte[] req = Encoding.UTF8.GetBytes(reqBody);
+
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Identify person using faceId", URI, req, "application/json", "POST");
+
+                return rsp;
+            };
+        }
+
+        private Func<FaceAPIResponse, Dictionary<string, decimal>> IdentifyFromFaceIdProcessRsp()
+        {
+            return (FaceAPIResponse rsp) => {
+                string jsonRsp = rsp.response;
+
+                JArray data = (JArray)JsonConvert.DeserializeObject(jsonRsp);
+                //data should be {[{"faceId":"...", "candidates": [{"personId":"...", "confidence": #.##}, {"personId":"...", "confidence": #.##}] }]}
+
+                JObject faceAndCandidates = (JObject)data[0];    //single face, potentially many candidates
+                Dictionary<string, decimal> idsAndConfidences = new Dictionary<string, decimal>();
+
+                JArray candidates = (JArray)faceAndCandidates["candidates"];
+                foreach (JObject cand in candidates)
+                {
+                    idsAndConfidences.Add(cand["personId"].Value<string>(), cand["confidence"].Value<decimal>());
+                }
+
+                return idsAndConfidences;
+            };
         }
 
         //just returns a list of faceIds from the detected image (note: these expire after 24 hours)
-        private async Task<List<string>> DetectForIdentifyingAsync(string pathToImg)
+        public FaceAPICall<List<string>> DetectForIdentifyingCall(string pathToImg)
         {
             byte[] img = GetImageAsByteArray(pathToImg);
 
-            return await DetectForIdentifyingAsync(img);
+            return DetectForIdentifyingCall(img);
         }
 
         //just returns a list of faceIds from the detected image (note: these expire after 24 hours)
-        private async Task<List<string>> DetectForIdentifyingAsync(byte[] imgData)
+        public FaceAPICall<List<string>> DetectForIdentifyingCall(byte[] imgData)
         {
-            string URI = uriBase + "detect";
-            byte[] img = imgData;
-            List<string> detectedIds = new List<string>();
-
-            string rsp = await MakeUnityRequestAsync("Detect faces in an image", URI, img, "application/octet-stream", "POST");
-            //response will be a list of faces: [{"faceId":"...", ...}, {"faceId":"...", ...}]
-            //[{"faceId":"7be28a2d-a1b1-49bf-8c4d-078552e60fe3","faceRectangle":{"top":256,"left":616,"width":330,"height":330}}]
-            JArray data = (JArray) JsonConvert.DeserializeObject(rsp);   //data should just be {"personId": "..."}
-            foreach (JObject face in data)
+            FaceAPICall<List<string>> call = new FaceAPICall<List<string>>
             {
-                detectedIds.Add(face["faceId"].Value<string>());
-            }
-
-            return detectedIds;
+                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.FACE_DETECT, ContentType.CONTENT_STREAM, "", imgData),
+                apiCall = DetectForIdentifyingRspAsync(imgData),
+                processResponse = DetectForIdentifyingProcessRsp(),
+                defaultResult = null
+            };
+            return call;
         }
 
-        private async Task<string> MakeUnityRequestAsync(string purpose, string uri, byte[] reqBodyData, string bodyContentType, string method, Dictionary<string, string> requestParameters = null)
+        private Func<Task<FaceAPIResponse>> DetectForIdentifyingRspAsync(byte[] imgData)
+        {
+            return async () => {
+                string URI = uriBase + "detect";
+                byte[] img = imgData;
+
+                FaceAPIResponse rsp = await MakeUnityRequestAsync("Detect faces in an image", URI, img, "application/octet-stream", "POST");
+                return rsp;
+            };
+        }
+
+        private Func<FaceAPIResponse, List<string>> DetectForIdentifyingProcessRsp()
+        {
+            return (FaceAPIResponse rsp) => {
+                List<string> detectedIds = new List<string>();
+
+                string jsonRsp = rsp.response;
+
+                //response will be a list of faces: [{"faceId":"...", ...}, {"faceId":"...", ...}]
+                //[{"faceId":"7be28a2d-a1b1-49bf-8c4d-078552e60fe3","faceRectangle":{"top":256,"left":616,"width":330,"height":330}}]
+                JArray data = (JArray)JsonConvert.DeserializeObject(jsonRsp);   //data should just be {"personId": "..."}
+                foreach (JObject face in data)
+                {
+                    detectedIds.Add(face["faceId"].Value<string>());
+                }
+
+                return detectedIds;
+            };
+        }
+
+        private async Task<FaceAPIResponse> MakeUnityRequestAsync(string purpose, string uri, byte[] reqBodyData, string bodyContentType, string method, Dictionary<string, string> requestParameters = null)
         {
             if (subscriptionKey == "" || uriBase == "")
             {
@@ -307,10 +424,18 @@ namespace UnityFaceIDHelper
 
             if (client.isNetworkError || client.isHttpError)
             {
-                throw new Exception("Error: " + client.error);
+                throw new Exception("UnityWebRequest Error: " + client.error);
             }
             else
-                return client.downloadHandler.text;
+            {
+                FaceAPIResponse rsp = new FaceAPIResponse
+                {
+                    response_type = (byte)client.responseCode,
+                    response = client.downloadHandler.text
+                };
+
+                return rsp;
+            }
             
         }
 
@@ -395,6 +520,79 @@ namespace UnityFaceIDHelper
             string json = key;
             JObject data = (JObject) JsonConvert.DeserializeObject(json);
             return data[param].Value<string>();
+        }
+    }
+
+    public class FaceAPICall<T>
+    {
+        public FaceAPIRequest request;
+        private FaceAPIResponse response;
+
+        public Func<Task<FaceAPIResponse>> apiCall;
+        public Func<FaceAPIResponse, T> processResponse;
+        public T defaultResult;
+        private T result;
+        private bool callSuccess;
+
+        public async Task MakeCallAsync()
+        {
+            // theoretically, the http request should always get a response
+            this.response = await apiCall.Invoke();
+
+            try
+            {
+                this.result = processResponse.Invoke(this.response);
+                callSuccess = true;
+            }
+            catch (Exception e)
+            {
+                this.result = defaultResult;
+                Console.WriteLine(e.ToString());
+                callSuccess = false;
+            }
+        }
+
+        public T GetResult()
+        {
+            return result;
+        }
+
+        public bool SuccessfulCall()
+        {
+            return this.callSuccess;
+        }
+
+    }
+
+    // made to match the face_msgs msg style
+    public struct FaceAPIRequest
+    {
+        public byte request_method;
+        public byte request_type;
+        public string content_type;
+        public string request_parameters;
+        public byte[] request_body;
+
+        public FaceAPIRequest(RequestMethod rMethod, RequestType rType, string cType, string rParams, byte[] rBodyBinary)
+        {
+            request_method = (byte)rMethod;
+            request_type = (byte)rType;
+            content_type = cType;
+            request_parameters = rParams;
+            request_body = rBodyBinary;
+        }
+    }
+
+    // made to match the face_msgs msg style
+    public struct FaceAPIResponse
+    {
+        public byte response_type;
+        public string response;
+
+        public FaceAPIResponse(ResponseType rType, string rsp)
+        {
+            response_type = (byte)rType;
+            response = rsp;
         }
     }
 }
