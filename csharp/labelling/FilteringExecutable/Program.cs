@@ -14,8 +14,8 @@ namespace Filtering
 {
     class Program
     {
-        static readonly string subscriptionKey = ReadJsonStrFromFile("../../api_access_key.txt", "subscriptionKey");
-        static readonly string uriBase = ReadJsonStrFromFile("../../api_access_key.txt", "uriBase");
+        static readonly string subscriptionKey = ReadJsonStrFromFile("../../../api_access_key.txt", "subscriptionKey");
+        static readonly string uriBase = ReadJsonStrFromFile("../../../api_access_key.txt", "uriBase");
         
         const string FILE_EXTENSION = ".bmp";
         const int STARTING_INDEX = 1; // ffmpeg starts their image indexing at 1 for some reason
