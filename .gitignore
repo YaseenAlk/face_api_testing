@@ -54,6 +54,7 @@ csharp/labelling/CategorizeIdentifiedVids/bin/
 csharp/labelling/CategorizeIdentifiedVids/obj/
 csharp/labelling/CategorizeIdentifiedVids/CategorizeIdentifiedVids.sln
 
+python/PythonFaceIDHelper/.idea/
 
 unity/UnityFaceIDHelper/.vs/
 unity/UnityFaceIDHelper/bin/
