@@ -14,6 +14,8 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityFaceIDHelper;
 
+using Messages.face_msgs;
+
 namespace UnityFaceIDHelper
 {
     public class FaceAPIHelper
@@ -42,7 +44,14 @@ namespace UnityFaceIDHelper
         {
             FaceAPICall<int> call = new FaceAPICall<int>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.FACE_DETECT, ContentType.CONTENT_STREAM, "", imgData),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_POST,
+                    request_type = FaceAPIRequest.FACE_DETECT,
+                    content_type = FaceAPIRequest.CONTENT_STREAM,
+                    request_parameters = "",
+                    request_body = imgData
+                },
                 apiCall = DetectForIdentifyingRspAsync(imgData),
                 processResponse = CountFacesProcessRsp(),
                 defaultResult = -1
@@ -75,7 +84,14 @@ namespace UnityFaceIDHelper
             byte[] empty = Encoding.UTF8.GetBytes("{}");
             FaceAPICall<string> call = new FaceAPICall<string>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_GET, RequestType.LARGEPERSONGROUP_GETTRAININGSTATUS, ContentType.CONTENT_JSON, "", empty),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_GET, 
+                    request_type = FaceAPIRequest.LARGEPERSONGROUP_GETTRAININGSTATUS, 
+                    content_type = FaceAPIRequest.CONTENT_JSON, 
+                    request_parameters = "", 
+                    request_body = empty
+                },
                 apiCall = GetLargePersonGroupTrainingStatusRspAsync(),
                 processResponse = GetLargePersonGroupTrainingStatusProcessRsp(),
                 defaultResult = TRAINING_API_ERROR
@@ -111,7 +127,14 @@ namespace UnityFaceIDHelper
             byte[] empty = Encoding.UTF8.GetBytes("{}");
             FaceAPICall<bool> call = new FaceAPICall<bool>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.LARGEPERSONGROUP_TRAIN, ContentType.CONTENT_JSON, "", empty),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_POST,
+                    request_type = FaceAPIRequest.LARGEPERSONGROUP_TRAIN,
+                    content_type = FaceAPIRequest.CONTENT_JSON,
+                    request_parameters = "",
+                    request_body = empty
+                },
                 apiCall = StartTrainingLargePersonGroupRspAsync(),
                 processResponse = StartTrainingLargePersonGroupProcessRsp(),
                 defaultResult = false
@@ -145,7 +168,14 @@ namespace UnityFaceIDHelper
             byte[] empty = Encoding.UTF8.GetBytes("{}");
             FaceAPICall<string> call = new FaceAPICall<string>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_GET, RequestType.LARGEPERSONGROUPPERSON_GET, ContentType.CONTENT_JSON, "", empty),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_GET,
+                    request_type = FaceAPIRequest.LARGEPERSONGROUPPERSON_GET,
+                    content_type = FaceAPIRequest.CONTENT_JSON,
+                    request_parameters = "",
+                    request_body = empty,
+                },
                 apiCall = GetNameFromLargePersonGroupPersonPersonIdRspAsync(personId),
                 processResponse = GetNameFromLargePersonGroupPersonPersonIdProcessRsp(),
                 defaultResult = ""
@@ -181,7 +211,14 @@ namespace UnityFaceIDHelper
             byte[] empty = Encoding.UTF8.GetBytes("{}");
             FaceAPICall<bool> call = new FaceAPICall<bool>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_DELETE, RequestType.LARGEPERSONGROUPPERSON_DELETEFACE, ContentType.CONTENT_JSON, "", empty),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_DELETE,
+                    request_type = FaceAPIRequest.LARGEPERSONGROUPPERSON_DELETEFACE,
+                    content_type = FaceAPIRequest.CONTENT_JSON,
+                    request_parameters = "",
+                    request_body = empty
+                },
                 apiCall = DeleteFaceFromLargePersonGroupPersonRspAsync(personId, persistedFaceId),
                 processResponse = DeleteFaceFromLargePersonGroupPersonProcessRsp(),
                 defaultResult = false
@@ -214,7 +251,14 @@ namespace UnityFaceIDHelper
         {
             FaceAPICall<string> call = new FaceAPICall<string>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.LARGEPERSONGROUPPERSON_ADDFACE, ContentType.CONTENT_STREAM, "", img),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_POST,
+                    request_type = FaceAPIRequest.LARGEPERSONGROUPPERSON_ADDFACE,
+                    content_type = FaceAPIRequest.CONTENT_STREAM,
+                    request_parameters = "",
+                    request_body = img
+                },
                 apiCall = AddFaceToLargePersonGroupPersonRspAsync(personId, img),
                 processResponse = AddFaceToLargePersonGroupPersonProcessRsp(),
                 defaultResult = ""
@@ -252,7 +296,14 @@ namespace UnityFaceIDHelper
 
             FaceAPICall<string> call = new FaceAPICall<string>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.LARGEPERSONGROUPPERSON_CREATE, ContentType.CONTENT_JSON, "", req),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_POST,
+                    request_type = FaceAPIRequest.LARGEPERSONGROUPPERSON_CREATE,
+                    content_type = FaceAPIRequest.CONTENT_JSON,
+                    request_parameters = "",
+                    request_body = req
+                },
                 apiCall = CreateLargePersonGroupPersonRspAsync(name, data),
                 processResponse = CreateLargePersonGroupPersonProcessRsp(),
                 defaultResult = ""
@@ -289,7 +340,14 @@ namespace UnityFaceIDHelper
 
             return new FaceAPICall<Dictionary<string, decimal>>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.FACE_IDENTIFY, ContentType.CONTENT_JSON, "", req),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_POST,
+                    request_type = FaceAPIRequest.FACE_IDENTIFY,
+                    content_type = FaceAPIRequest.CONTENT_JSON,
+                    request_parameters = "",
+                    request_body = req
+                },
                 apiCall = IdentifyFromFaceIdRspAsync(faceId),
                 processResponse = IdentifyFromFaceIdProcessRsp(),
                 defaultResult = null
@@ -343,7 +401,14 @@ namespace UnityFaceIDHelper
         {
             FaceAPICall<List<string>> call = new FaceAPICall<List<string>>
             {
-                request = new FaceAPIRequest(RequestMethod.HTTP_POST, RequestType.FACE_DETECT, ContentType.CONTENT_STREAM, "", imgData),
+                request = new FaceAPIRequest
+                {
+                    request_method = FaceAPIRequest.HTTP_POST,
+                    request_type = FaceAPIRequest.FACE_DETECT,
+                    content_type = FaceAPIRequest.CONTENT_STREAM,
+                    request_parameters = "",
+                    request_body = imgData
+                },
                 apiCall = DetectForIdentifyingRspAsync(imgData),
                 processResponse = DetectForIdentifyingProcessRsp(),
                 defaultResult = null
@@ -562,37 +627,5 @@ namespace UnityFaceIDHelper
             return this.callSuccess;
         }
 
-    }
-
-    // made to match the face_msgs msg style
-    public struct FaceAPIRequest
-    {
-        public byte request_method;
-        public byte request_type;
-        public string content_type;
-        public string request_parameters;
-        public byte[] request_body;
-
-        public FaceAPIRequest(RequestMethod rMethod, RequestType rType, string cType, string rParams, byte[] rBodyBinary)
-        {
-            request_method = (byte)rMethod;
-            request_type = (byte)rType;
-            content_type = cType;
-            request_parameters = rParams;
-            request_body = rBodyBinary;
-        }
-    }
-
-    // made to match the face_msgs msg style
-    public struct FaceAPIResponse
-    {
-        public short response_type;
-        public string response;
-
-        public FaceAPIResponse(ResponseType rType, string rsp)
-        {
-            response_type = (short)rType;
-            response = rsp;
-        }
     }
 }
