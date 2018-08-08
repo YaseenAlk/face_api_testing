@@ -1,11 +1,12 @@
 from collections import namedtuple
 
+# Update 8/8/18: now using face_msgs directly!
 # pythonic version of structs:
-FaceAPIRequest = namedtuple('FaceAPIRequest',
-                            ['request_method', 'request_type', 'content_type', 'request_parameters', 'request_body'])
+# FaceAPIRequest = namedtuple('FaceAPIRequest',
+#                             ['request_method', 'request_type', 'content_type', 'request_parameters', 'request_body'])
 
-FaceAPIResponse = namedtuple('FaceAPIResponse',
-                             ['response_type', 'response'])
+# FaceAPIResponse = namedtuple('FaceAPIResponse',
+#                              ['response_type', 'response'])
 
 
 class FaceAPICall:

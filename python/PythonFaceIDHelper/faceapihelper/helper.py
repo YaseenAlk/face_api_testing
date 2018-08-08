@@ -8,10 +8,14 @@ usage:
 ---
 
 # importing:
-from faceapihelper.helper import FaceAPIHelper as helper
+from faceapihelper.helper import FaceAPIHelper
+
+# initializing helper
+api_access_key = open(path_to_api_access_key.txt, "rb")                 # load api_access_key json
+helper = FaceAPIHelper(api_access_key, "insert person group id here")   # create a FaceAPIHelper obj
 
 # making API calls:
-face_counter = helper.call_count_faces("/Desktop/image.png")    # create a FaceAPICall obj
+face_counter = helper.call_count_faces("/Desktop/image.png")    # create a FaceAPICall obj from helper
 face_counter.make_call()                                        # make the API call here
 
 num_faces_in_img = 0
@@ -24,11 +28,8 @@ request_msg_wrapper = face_counter.request
 response_msg_wrapper = face_counter.response
 """
 from faceapihelper.structs import FaceAPICall as call_struct
-from faceapihelper.structs import FaceAPIRequest as req_struct
-from faceapihelper.structs import FaceAPIResponse as rsp_struct
-from faceapihelper.facemsgenums import RequestMethod as r_method_enum
-from faceapihelper.facemsgenums import RequestType as r_type_enum
-from faceapihelper.facemsgenums import ContentType as c_type_enum
+from unity_game_msgs.msg import FaceAPIRequest as req_msg
+from unity_game_msgs.msg import FaceAPIResponse as rsp_msg
 
 from pathlib import Path
 from enum import Enum
@@ -49,8 +50,13 @@ class FaceAPIHelper:
     def call_count_faces(self, img_data):
         img_data = self._enforce_byte_array_(img_data)
 
-        req = req_struct(r_method_enum.HTTP_POST.value, r_type_enum.FACE_DETECT.value,
-                         c_type_enum.CONTENT_STREAM.value, "", img_data)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_POST
+        req.request_type = req_msg.FACE_DETECT
+        req.content_type = req_msg.CONTENT_STREAM
+        req.request_parameters = ""
+        req.request_body = img_data
+
         api_call = self._rsp_detect_for_identifying_
         rsp_prcsr = self._process_rsp_count_faces_
         default_val = -1 # normally returns the number of faces detected in the img
@@ -62,8 +68,13 @@ class FaceAPIHelper:
     def call_get_large_person_group_training_status(self):
         empty = "{}".encode('utf-8')
 
-        req = req_struct(r_method_enum.HTTP_GET.value, r_type_enum.LARGEPERSONGROUP_GETTRAININGSTATUS.value,
-                         c_type_enum.CONTENT_JSON.value, "", empty)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_GET
+        req.request_type = req_msg.LARGEPERSONGROUP_GETTRAININGSTATUS
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = ""
+        req.request_body = empty
+
         api_call = self._rsp_get_large_person_group_training_status_
         rsp_prcsr = self._process_rsp_get_large_person_group_training_status_
         default_val = TrainingStatus.TRAINING_API_ERROR # normally returns a string (TrainingStatus Enum values)
@@ -74,8 +85,13 @@ class FaceAPIHelper:
     def call_start_training_large_person_group(self):
         empty = "{}".encode('utf-8')
 
-        req = req_struct(r_method_enum.HTTP_POST.value, r_type_enum.LARGEPERSONGROUP_TRAIN.value,
-                         c_type_enum.CONTENT_JSON.value, "", empty)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_POST
+        req.request_type = req_msg.LARGEPERSONGROUP_TRAIN
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = ""
+        req.request_body = empty
+
         api_call = self._rsp_start_training_large_person_group_
         rsp_prcsr = self._process_rsp_start_training_large_person_group_
         default_val = False # normally returns True if the "Start Training" call is successful
@@ -86,8 +102,13 @@ class FaceAPIHelper:
     def call_get_name_from_large_person_group_person_person_id(self, person_id):
         empty = "{}".encode('utf-8')
 
-        req = req_struct(r_method_enum.HTTP_GET.value, r_type_enum.LARGEPERSONGROUPPERSON_GET.value,
-                         c_type_enum.CONTENT_JSON.value, "", empty)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_GET
+        req.request_type = req_msg.LARGEPERSONGROUPPERSON_GET
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = ""
+        req.request_body = empty
+
         api_call = self._rsp_get_name_from_large_person_group_person_person_id_
         rsp_prcsr = self._process_rsp_get_name_from_large_person_group_person_person_id_
         default_val = "" # normally returns a name
@@ -99,8 +120,13 @@ class FaceAPIHelper:
     def call_delete_face_from_large_person_group_person(self, person_id, persisted_face_id):
         empty = "{}".encode('utf-8')
 
-        req = req_struct(r_method_enum.HTTP_DELETE.value, r_type_enum.LARGEPERSONGROUPPERSON_DELETEFACE.value,
-                         c_type_enum.CONTENT_JSON.value, "", empty)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_DELETE
+        req.request_type = req_msg.LARGEPERSONGROUPPERSON_DELETEFACE
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = ""
+        req.request_body = empty
+
         api_call = self._rsp_delete_face_from_large_person_group_person_
         rsp_prcsr = self._process_rsp_delete_face_from_large_person_group_person_
         default_val = False # normally returns True if deletion is successful
@@ -112,8 +138,13 @@ class FaceAPIHelper:
     def call_add_face_to_large_person_group_person(self, person_id, img_data):
         img_data = self._enforce_byte_array_(img_data)
 
-        req = req_struct(r_method_enum.HTTP_POST.value, r_type_enum.LARGEPERSONGROUPPERSON_ADDFACE.value,
-                         c_type_enum.CONTENT_STREAM.value, "", img_data)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_POST
+        req.request_type = req_msg.LARGEPERSONGROUPPERSON_ADDFACE
+        req.content_type = req_msg.CONTENT_STREAM
+        req.request_parameters = ""
+        req.request_body = img_data
+
         api_call = self._rsp_add_face_to_large_person_group_person_
         rsp_prcsr = self._process_rsp_add_face_to_large_person_group_person_
         default_val = "" # normally returns a persistedFaceId
@@ -125,8 +156,13 @@ class FaceAPIHelper:
     def call_create_large_person_group_person(self, name, data=""):
         req_body = ('{"name": "' + name + '", "userData": "' + data + '"}').encode('utf-8')
 
-        req = req_struct(r_method_enum.HTTP_POST.value, r_type_enum.LARGEPERSONGROUPPERSON_CREATE.value,
-                         c_type_enum.CONTENT_JSON.value, "", req_body)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_POST
+        req.request_type = req_msg.LARGEPERSONGROUPPERSON_CREATE
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = ""
+        req.request_body = req_body
+
         api_call = self._rsp_create_large_person_group_person_
         rsp_prcsr = self._process_rsp_create_large_person_group_person_
         default_val = "" # normally returns a personId
@@ -138,8 +174,13 @@ class FaceAPIHelper:
     def call_identify_from_face_id(self, face_id):
         req_body = ('{"largePersonGroupId": "' + self.person_group_id + '", "faceIds": ["' + face_id + '"]}').encode('utf-8')
 
-        req = req_struct(r_method_enum.HTTP_POST.value, r_type_enum.FACE_IDENTIFY.value,
-                         c_type_enum.CONTENT_JSON.value, "", req_body)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_POST
+        req.request_type = req_msg.FACE_IDENTIFY
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = ""
+        req.request_body = req_body
+
         api_call = self._rsp_identify_from_face_id_
         rsp_prcsr = self._process_rsp_identify_from_face_id_
         default_val = None # normally returns a dictionary: key=personId (guess), value=confidence of guess
@@ -151,8 +192,13 @@ class FaceAPIHelper:
     def call_detect_for_identifying(self, img_data):
         img_data = self._enforce_byte_array_(img_data)
 
-        req = req_struct(r_method_enum.HTTP_POST.value, r_type_enum.FACE_DETECT.value,
-                         c_type_enum.CONTENT_STREAM.value, "", img_data)
+        req = req_msg()
+        req.request_method = req_msg.HTTP_POST
+        req.request_type = req_msg.FACE_DETECT
+        req.content_type = req_msg.CONTENT_STREAM
+        req.request_parameters = ""
+        req.request_body = img_data
+
         api_call = self._rsp_detect_for_identifying_
         rsp_prcsr = self._process_rsp_detect_for_identifying_
         default_val = None # normally returns a list of faceIds detected in the image
@@ -164,7 +210,7 @@ class FaceAPIHelper:
     def _rsp_identify_from_face_id_(self, face_id):
         uri = self.uri_base + "identify"
         encoded = ('{"largePersonGroupId": "' + self.person_group_id + '", "faceIds": ["' + face_id + '"]}').encode('utf-8')
-        rsp = self.make_request("Identify person using faceId", uri, encoded, c_type_enum.CONTENT_JSON, r_method_enum.HTTP_POST)
+        rsp = self.make_request("Identify person using faceId", uri, encoded, req_msg.CONTENT_JSON, req_msg.HTTP_POST)
         return rsp
 
     def _process_rsp_identify_from_face_id_(self, api_rsp):
@@ -183,7 +229,7 @@ class FaceAPIHelper:
     def _rsp_create_large_person_group_person_(self, name, data):
         uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons"
         encoded = ('{"name": "' + name + '", "userData": "' + data + '"}').encode('utf-8')
-        rsp = self.make_request("Adding Person to Person Group", uri, encoded, c_type_enum.CONTENT_JSON, r_method_enum.HTTP_POST)
+        rsp = self.make_request("Adding Person to Person Group", uri, encoded, req_msg.CONTENT_JSON, req_msg.HTTP_POST)
         return rsp
 
     def _process_rsp_create_large_person_group_person_(self, api_rsp):
@@ -193,7 +239,7 @@ class FaceAPIHelper:
     def _rsp_add_face_to_large_person_group_person_(self, person_id, img_data):
         uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons/" + person_id + "/persistedFaces?"
         img = img_data
-        rsp = self.make_request("Adding Image to " + person_id, uri, img, c_type_enum.CONTENT_STREAM, r_method_enum.HTTP_POST)
+        rsp = self.make_request("Adding Image to " + person_id, uri, img, req_msg.CONTENT_STREAM, req_msg.HTTP_POST)
 
     def _process_rsp_add_face_to_large_person_group_person_(self, api_rsp):
         json_rsp = json.loads(api_rsp.response)
@@ -202,7 +248,7 @@ class FaceAPIHelper:
     def _rsp_delete_face_from_large_person_group_person_(self, person_id, persisted_face_id):
         uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons/" + person_id + "/persistedFaces/" + persisted_face_id
         empty = "{}".encode('utf-8')
-        rsp = self.make_request("Removing Image from " + person_id, uri, empty, c_type_enum.CONTENT_JSON, r_method_enum.HTTP_DELETE)
+        rsp = self.make_request("Removing Image from " + person_id, uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_DELETE)
         return rsp
 
     def _process_rsp_delete_face_from_large_person_group_person_(self, api_rsp):
@@ -212,7 +258,7 @@ class FaceAPIHelper:
     def _rsp_get_name_from_large_person_group_person_person_id_(self, person_id):
         uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons/" + person_id
         empty = "{}".encode('utf-8')
-        rsp = self.make_request("Retrieve Person from ID", uri, empty, c_type_enum.CONTENT_JSON, r_method_enum.HTTP_GET)
+        rsp = self.make_request("Retrieve Person from ID", uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_GET)
         return rsp
 
     def _process_rsp_get_name_from_large_person_group_person_person_id_(self, api_rsp):
@@ -223,7 +269,7 @@ class FaceAPIHelper:
         uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/train"
         empty = "{}".encode('utf-8')
         rsp = self.make_request("Training the " + self.person_group_id + " LargePersonGroup using the added images",
-                                uri, empty, c_type_enum.CONTENT_JSON, r_method_enum.HTTP_POST)
+                                uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_POST)
         return rsp
 
     def _process_rsp_start_training_large_person_group_(self, api_rsp):
@@ -233,7 +279,7 @@ class FaceAPIHelper:
     def _rsp_get_large_person_group_training_status_(self):
         uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/training"
         empty = "{}".encode('utf-8')
-        rsp = self.make_request("Check training status", uri, empty, c_type_enum.CONTENT_JSON, r_method_enum.HTTP_GET)
+        rsp = self.make_request("Check training status", uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_GET)
         return rsp
 
     def _process_rsp_get_large_person_group_training_status_(self, api_rsp):
@@ -243,7 +289,7 @@ class FaceAPIHelper:
     def _rsp_detect_for_identifying_(self, img_data):
         uri = self.uri_base + "detect"
         img = img_data
-        rsp = self.make_request("Detect faces in an img", uri, img, c_type_enum.CONTENT_STREAM, r_method_enum.HTTP_POST)
+        rsp = self.make_request("Detect faces in an img", uri, img, req_msg.CONTENT_STREAM, req_msg.HTTP_POST)
         return rsp
 
     def _process_rsp_detect_for_identifying_(self, api_rsp):
@@ -263,21 +309,26 @@ class FaceAPIHelper:
 
         req_headers = {"Ocp-Apim-Subscription-Key": self.sub_key, "Content-Type": body_content_type.value}
 
-        if method == r_method_enum.HTTP_POST:
+        if method == req_msg.HTTP_POST:
             response = requests.post(uri, data=req_body_data, headers=req_headers, params=request_params)
-        elif method == r_method_enum.HTTP_PUT:
+        elif method == req_msg.HTTP_PUT:
             response = requests.put(uri, data=req_body_data, headers=req_headers, params=request_params)
-        elif method == r_method_enum.HTTP_GET:
+        elif method == req_msg.HTTP_GET:
             response = requests.get(uri, data=req_body_data, headers=req_headers, params=request_params)
-        elif method == r_method_enum.HTTP_DELETE:
+        elif method == req_msg.HTTP_DELETE:
             response = requests.delete(uri, data=req_body_data, headers=req_headers, params=request_params)
-        elif method == r_method_enum.HTTP_PATCH:
+        elif method == req_msg.HTTP_PATCH:
             response = requests.patch(uri, data=req_body_data, headers=req_headers, params=request_params)
         else:
             raise ValueError("Unknown RequestMethod specified!")
 
-        request_struct = rsp_struct(response.status_code, response.content)
+        request_struct = rsp_msg()
+        request_struct.response_type = response.status_code
+        request_struct.response = response.content
+
         return request_struct
+
+# Helper functions:
 
     def get_image_as_byte_array(self, img_file_path):
         with open(img_file_path, "rb") as imageFile:
