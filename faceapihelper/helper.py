@@ -27,7 +27,7 @@ if face_counter.was_call_successful():                          # check if API r
 request_msg_wrapper = face_counter.request
 response_msg_wrapper = face_counter.response
 """
-from faceapihelper.structs import FaceAPICall as call_struct
+from structs import FaceAPICall as call_struct
 from unity_game_msgs.msg import FaceAPIRequest as req_msg
 from unity_game_msgs.msg import FaceAPIResponse as rsp_msg
 
@@ -39,9 +39,14 @@ import json
 
 class FaceAPIHelper:
 
-    def __init__(self, api_access_key, p_grp_id):
+    person_group_id = None  # "uninitialized" value
+
+    def __init__(self, api_access_key):
         self.sub_key = self.read_json_param_from_str(api_access_key, "subscriptionKey")
         self.uri_base = self.read_json_param_from_str(api_access_key, "uriBase")
+
+    def __init__(self, api_access_key, p_grp_id):
+        self.__init__(api_access_key)
         self.person_group_id = p_grp_id
 
     # All public methods start with "call" (e.g. call_count_faces)
@@ -65,7 +70,10 @@ class FaceAPIHelper:
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
 
-    def call_get_large_person_group_training_status(self):
+    def call_get_large_person_group_training_status(self, person_grp_id=None):
+
+        grp = self._enforce_persongroup_id_(person_grp_id)
+
         empty = "{}".encode('utf-8')
 
         req = req_msg()
@@ -78,11 +86,15 @@ class FaceAPIHelper:
         api_call = self._rsp_get_large_person_group_training_status_
         rsp_prcsr = self._process_rsp_get_large_person_group_training_status_
         default_val = TrainingStatus.TRAINING_API_ERROR # normally returns a string (TrainingStatus Enum values)
+        arg_dict = {'group': grp}
 
-        call = call_struct(req, api_call, rsp_prcsr, default_val)
+        call = call_struct(req, api_call, rsp_prcsr, default_val, arg_dict)
         return call
 
-    def call_start_training_large_person_group(self):
+    def call_start_training_large_person_group(self, person_grp_id=None):
+
+        grp = self._enforce_persongroup_id_(person_grp_id)
+
         empty = "{}".encode('utf-8')
 
         req = req_msg()
@@ -95,11 +107,15 @@ class FaceAPIHelper:
         api_call = self._rsp_start_training_large_person_group_
         rsp_prcsr = self._process_rsp_start_training_large_person_group_
         default_val = False # normally returns True if the "Start Training" call is successful
+        arg_dict = {'group': grp}
 
-        call = call_struct(req, api_call, rsp_prcsr, default_val)
+        call = call_struct(req, api_call, rsp_prcsr, default_val, arg_dict)
         return call
 
-    def call_get_name_from_large_person_group_person_person_id(self, person_id):
+    def call_get_name_from_large_person_group_person_person_id(self, person_id, person_grp_id=None):
+
+        grp = self._enforce_persongroup_id_(person_grp_id)
+
         empty = "{}".encode('utf-8')
 
         req = req_msg()
@@ -112,12 +128,15 @@ class FaceAPIHelper:
         api_call = self._rsp_get_name_from_large_person_group_person_person_id_
         rsp_prcsr = self._process_rsp_get_name_from_large_person_group_person_person_id_
         default_val = "" # normally returns a name
-        arg_dict = {'person_id': person_id}
+        arg_dict = {'person_id': person_id, 'group': grp}
 
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
 
-    def call_delete_face_from_large_person_group_person(self, person_id, persisted_face_id):
+    def call_delete_face_from_large_person_group_person(self, person_id, persisted_face_id, person_grp_id=None):
+
+        grp = self._enforce_persongroup_id_(person_grp_id)
+
         empty = "{}".encode('utf-8')
 
         req = req_msg()
@@ -130,12 +149,15 @@ class FaceAPIHelper:
         api_call = self._rsp_delete_face_from_large_person_group_person_
         rsp_prcsr = self._process_rsp_delete_face_from_large_person_group_person_
         default_val = False # normally returns True if deletion is successful
-        arg_dict = {'person_id': person_id, 'persisted_face_id': persisted_face_id}
+        arg_dict = {'person_id': person_id, 'persisted_face_id': persisted_face_id, 'group': grp}
 
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
 
-    def call_add_face_to_large_person_group_person(self, person_id, img_data):
+    def call_add_face_to_large_person_group_person(self, person_id, img_data, person_grp_id=None):
+
+        grp = self._enforce_persongroup_id_(person_grp_id)
+
         img_data = self._enforce_byte_array_(img_data)
 
         req = req_msg()
@@ -148,12 +170,15 @@ class FaceAPIHelper:
         api_call = self._rsp_add_face_to_large_person_group_person_
         rsp_prcsr = self._process_rsp_add_face_to_large_person_group_person_
         default_val = "" # normally returns a persistedFaceId
-        arg_dict = {'person_id': person_id, 'img_data': img_data}
+        arg_dict = {'person_id': person_id, 'img_data': img_data, 'group': grp}
 
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
 
-    def call_create_large_person_group_person(self, name, data=""):
+    def call_create_large_person_group_person(self, name, data="", person_grp_id=None):
+
+        grp = self._enforce_persongroup_id_(person_grp_id)
+
         req_body = ('{"name": "' + name + '", "userData": "' + data + '"}').encode('utf-8')
 
         req = req_msg()
@@ -166,13 +191,16 @@ class FaceAPIHelper:
         api_call = self._rsp_create_large_person_group_person_
         rsp_prcsr = self._process_rsp_create_large_person_group_person_
         default_val = "" # normally returns a personId
-        arg_dict = {'name': name, 'data': data}
+        arg_dict = {'name': name, 'data': data, 'group': grp}
 
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
 
-    def call_identify_from_face_id(self, face_id):
-        req_body = ('{"largePersonGroupId": "' + self.person_group_id + '", "faceIds": ["' + face_id + '"]}').encode('utf-8')
+    def call_identify_from_face_id(self, face_id, person_grp_id=None):
+
+        grp = self._enforce_persongroup_id_(person_grp_id)
+
+        req_body = ('{"largePersonGroupId": "' + grp + '", "faceIds": ["' + face_id + '"]}').encode('utf-8')
 
         req = req_msg()
         req.request_method = req_msg.HTTP_POST
@@ -184,7 +212,7 @@ class FaceAPIHelper:
         api_call = self._rsp_identify_from_face_id_
         rsp_prcsr = self._process_rsp_identify_from_face_id_
         default_val = None # normally returns a dictionary: key=personId (guess), value=confidence of guess
-        arg_dict = {'face_id': face_id}
+        arg_dict = {'face_id': face_id, 'group': grp}
 
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
@@ -207,9 +235,9 @@ class FaceAPIHelper:
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
 
-    def _rsp_identify_from_face_id_(self, face_id):
+    def _rsp_identify_from_face_id_(self, face_id, group):
         uri = self.uri_base + "identify"
-        encoded = ('{"largePersonGroupId": "' + self.person_group_id + '", "faceIds": ["' + face_id + '"]}').encode('utf-8')
+        encoded = ('{"largePersonGroupId": "' + group + '", "faceIds": ["' + face_id + '"]}').encode('utf-8')
         rsp = self.make_request("Identify person using faceId", uri, encoded, req_msg.CONTENT_JSON, req_msg.HTTP_POST)
         return rsp
 
@@ -226,8 +254,8 @@ class FaceAPIHelper:
         return idsAndConfidences
 
 
-    def _rsp_create_large_person_group_person_(self, name, data):
-        uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons"
+    def _rsp_create_large_person_group_person_(self, name, data, group):
+        uri = self.uri_base + "largepersongroups/" + group + "/persons"
         encoded = ('{"name": "' + name + '", "userData": "' + data + '"}').encode('utf-8')
         rsp = self.make_request("Adding Person to Person Group", uri, encoded, req_msg.CONTENT_JSON, req_msg.HTTP_POST)
         return rsp
@@ -236,17 +264,18 @@ class FaceAPIHelper:
         json_rsp = json.loads(api_rsp.response)
         return json_rsp["personId"]
 
-    def _rsp_add_face_to_large_person_group_person_(self, person_id, img_data):
-        uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons/" + person_id + "/persistedFaces?"
+    def _rsp_add_face_to_large_person_group_person_(self, person_id, img_data, group):
+        uri = self.uri_base + "largepersongroups/" + group + "/persons/" + person_id + "/persistedFaces?"
         img = img_data
         rsp = self.make_request("Adding Image to " + person_id, uri, img, req_msg.CONTENT_STREAM, req_msg.HTTP_POST)
+        return rsp
 
     def _process_rsp_add_face_to_large_person_group_person_(self, api_rsp):
         json_rsp = json.loads(api_rsp.response)
         return json_rsp["persistedFaceId"]
 
-    def _rsp_delete_face_from_large_person_group_person_(self, person_id, persisted_face_id):
-        uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons/" + person_id + "/persistedFaces/" + persisted_face_id
+    def _rsp_delete_face_from_large_person_group_person_(self, person_id, persisted_face_id, group):
+        uri = self.uri_base + "largepersongroups/" + group + "/persons/" + person_id + "/persistedFaces/" + persisted_face_id
         empty = "{}".encode('utf-8')
         rsp = self.make_request("Removing Image from " + person_id, uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_DELETE)
         return rsp
@@ -255,8 +284,8 @@ class FaceAPIHelper:
         json_rsp = json.loads(api_rsp.response)
         return json_rsp == ""
 
-    def _rsp_get_name_from_large_person_group_person_person_id_(self, person_id):
-        uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/persons/" + person_id
+    def _rsp_get_name_from_large_person_group_person_person_id_(self, person_id, group):
+        uri = self.uri_base + "largepersongroups/" + group + "/persons/" + person_id
         empty = "{}".encode('utf-8')
         rsp = self.make_request("Retrieve Person from ID", uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_GET)
         return rsp
@@ -265,10 +294,10 @@ class FaceAPIHelper:
         json_rsp = json.loads(api_rsp.response)
         return json_rsp["name"]
 
-    def _rsp_start_training_large_person_group_(self):
-        uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/train"
+    def _rsp_start_training_large_person_group_(self, group):
+        uri = self.uri_base + "largepersongroups/" + group + "/train"
         empty = "{}".encode('utf-8')
-        rsp = self.make_request("Training the " + self.person_group_id + " LargePersonGroup using the added images",
+        rsp = self.make_request("Training the " + group + " LargePersonGroup using the added images",
                                 uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_POST)
         return rsp
 
@@ -276,8 +305,8 @@ class FaceAPIHelper:
         json_rsp = json.loads(api_rsp.response)
         return json_rsp == ""
 
-    def _rsp_get_large_person_group_training_status_(self):
-        uri = self.uri_base + "largepersongroups/" + self.person_group_id + "/training"
+    def _rsp_get_large_person_group_training_status_(self, group):
+        uri = self.uri_base + "largepersongroups/" + group + "/training"
         empty = "{}".encode('utf-8')
         rsp = self.make_request("Check training status", uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_GET)
         return rsp
@@ -356,6 +385,11 @@ class FaceAPIHelper:
             except AttributeError:
                 raise ValueError("Argument is not a valid image byte array!")
 
+    def _enforce_persongroup_id_(self, arg_grp):
+        if self.person_group_id is None and arg_grp is None:
+            raise ValueError("Need to specify a (large)PersonGroup to use this call")
+
+        return self.person_group_id if self.person_group_id is not None else arg_grp
 
 class TrainingStatus(Enum):
     TRAINING_SUCCEEDED = "succeeded"
