@@ -101,7 +101,7 @@ class FaceAPIHelper:
         req.request_method = req_msg.HTTP_POST
         req.request_type = req_msg.LARGEPERSONGROUP_TRAIN
         req.content_type = req_msg.CONTENT_JSON
-        req.request_parameters = ""
+        req.request_parameters = str(json.dumps({'largePersonGroupId': grp}))
         req.request_body = empty
 
         api_call = self._rsp_start_training_large_person_group_
@@ -122,7 +122,7 @@ class FaceAPIHelper:
         req.request_method = req_msg.HTTP_GET
         req.request_type = req_msg.LARGEPERSONGROUPPERSON_GET
         req.content_type = req_msg.CONTENT_JSON
-        req.request_parameters = ""
+        req.request_parameters = str(json.dumps({'largePersonGroupId': grp, 'personId': person_id}))
         req.request_body = empty
 
         api_call = self._rsp_get_name_from_large_person_group_person_person_id_
@@ -143,7 +143,7 @@ class FaceAPIHelper:
         req.request_method = req_msg.HTTP_DELETE
         req.request_type = req_msg.LARGEPERSONGROUPPERSON_DELETEFACE
         req.content_type = req_msg.CONTENT_JSON
-        req.request_parameters = ""
+        req.request_parameters = str(json.dumps({'largePersonGroupId': grp, 'personId': person_id, 'persistedFaceId': persisted_face_id}))
         req.request_body = empty
 
         api_call = self._rsp_delete_face_from_large_person_group_person_
@@ -164,7 +164,7 @@ class FaceAPIHelper:
         req.request_method = req_msg.HTTP_POST
         req.request_type = req_msg.LARGEPERSONGROUPPERSON_ADDFACE
         req.content_type = req_msg.CONTENT_STREAM
-        req.request_parameters = ""
+        req.request_parameters = str(json.dumps({'largePersonGroupId': grp, 'personId': person_id}))
         req.request_body = img_data
 
         api_call = self._rsp_add_face_to_large_person_group_person_
@@ -185,7 +185,7 @@ class FaceAPIHelper:
         req.request_method = req_msg.HTTP_POST
         req.request_type = req_msg.LARGEPERSONGROUPPERSON_CREATE
         req.content_type = req_msg.CONTENT_JSON
-        req.request_parameters = ""
+        req.request_parameters = str(json.dumps({'largePersonGroupId': grp}))
         req.request_body = req_body
 
         api_call = self._rsp_create_large_person_group_person_
