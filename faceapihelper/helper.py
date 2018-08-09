@@ -52,6 +52,41 @@ class FaceAPIHelper:
     # All public methods start with "call" (e.g. call_count_faces)
     # 'private' methods are surrounded by underscores (e.g. _enforce_byte_array_)
 
+    def call_create_large_person_group(self, group_id, display_name, user_data=""):
+        req_body = ('{"name": "' + display_name + '", "userData": "' + user_data + '"}').encode('utf-8')
+
+        req = req_msg()
+        req.request_method = req_msg.HTTP_PUT
+        req.request_type = req_msg.LARGEPERSONGROUP_CREATE
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = str(json.dumps({'largePersonGroupId': group_id}))
+        req.request_body = req_body
+
+        api_call = self._rsp_create_large_person_group_
+        rsp_prcsr = self._process_rsp_start_training_large_person_group_ # both of them have an empty response if successful :P
+        default_val = False  # normally returns True if the group is successfully created
+        arg_dict = {'group_id': group_id, 'display_name': display_name, 'user_data': user_data}
+
+        call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
+        return call
+
+    def call_list_large_person_group_ids(self):
+        empty = "{}".encode('utf-8')
+
+        req = req_msg()
+        req.request_method = req_msg.HTTP_GET
+        req.request_type = req_msg.LARGEPERSONGROUP_LIST
+        req.content_type = req_msg.CONTENT_JSON
+        req.request_parameters = ""
+        req.request_body = empty
+
+        api_call = self._rsp_list_large_person_group_ids_
+        rsp_prcsr = self._process_rsp_list_large_person_group_ids_
+        default_val = None # normally returns a list of largePersonGroupIds associated with this api key
+
+        call = call_struct(req, api_call, rsp_prcsr, default_val)
+        return call
+
     def call_count_faces(self, img_data):
         img_data = self._enforce_byte_array_(img_data)
 
@@ -235,6 +270,26 @@ class FaceAPIHelper:
         call = call_struct(req, api_call, rsp_prcsr, default_val, argument_dict=arg_dict)
         return call
 
+    def _rsp_create_large_person_group_(self, group_id, display_name, user_data):
+        uri = self.uri_base + "largepersongroups/" + group_id
+        encoded = ('{"name": "' + display_name + '", "userData": "' + user_data + '"}').encode('utf-8')
+        rsp = self.make_request("Creating Large Person Group", uri, encoded, req_msg.CONTENT_JSON, req_msg.HTTP_PUT)
+        return rsp
+
+    def _rsp_list_large_person_group_ids_(self):
+        uri = self.uri_base + "largepersongroups"
+        empty = "{}".encode('utf-8')
+        rsp = self.make_request("Listing Large Person Groups", uri, empty, req_msg.CONTENT_JSON, req_msg.HTTP_GET)
+        return rsp
+
+    def _process_rsp_list_large_person_group_ids_(self, api_rsp):
+        groups = []
+        json_rsp = json.loads(api_rsp.response)
+        for face in json_rsp:
+            parsed_grp = json.loads(face)
+            groups.append(parsed_grp)
+        return groups
+
     def _rsp_identify_from_face_id_(self, face_id, group):
         uri = self.uri_base + "identify"
         encoded = ('{"largePersonGroupId": "' + group + '", "faceIds": ["' + face_id + '"]}').encode('utf-8')
@@ -252,7 +307,6 @@ class FaceAPIHelper:
             idsAndConfidences[cand["personId"]] = cand["confidence"]
 
         return idsAndConfidences
-
 
     def _rsp_create_large_person_group_person_(self, name, data, group):
         uri = self.uri_base + "largepersongroups/" + group + "/persons"
@@ -390,6 +444,7 @@ class FaceAPIHelper:
             raise ValueError("Need to specify a (large)PersonGroup to use this call")
 
         return self.person_group_id if self.person_group_id is not None else arg_grp
+
 
 class TrainingStatus(Enum):
     TRAINING_SUCCEEDED = "succeeded"
