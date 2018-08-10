@@ -1,4 +1,6 @@
 
+# Note The code here is essentially obsolete/redundant because Microsoft has a [python sdk](https://github.com/Microsoft/Cognitive-Face-Python) for their Face API.
+---
 # PythonFaceIDHelper
 
 This branch isolates the PythonFaceIDHelper project for use as a module in other projects! 
