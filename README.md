@@ -1,5 +1,5 @@
 
-# Note The code here is essentially obsolete/redundant because Microsoft has a [python sdk](https://github.com/Microsoft/Cognitive-Face-Python) for their Face API.
+# Note: The code here is essentially obsolete/redundant because Microsoft has a [python sdk](https://github.com/Microsoft/Cognitive-Face-Python) for their Face API. I made a modified version of it [here](https://github.com/YaseenAlk/Cognitive-Face-Python/tree/ROS-implementation).
 ---
 # PythonFaceIDHelper
 
